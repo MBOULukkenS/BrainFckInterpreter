@@ -5,6 +5,8 @@
 #ifndef BRAINFCKINTERPRETER_LOGGING_H
 #define BRAINFCKINTERPRETER_LOGGING_H
 
+#include <iostream>
+
 #define LogMessage(message) \
 {                                            \
 std::cout << "[+] " << message << std::endl;           \
