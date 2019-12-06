@@ -8,29 +8,40 @@
 
 #include <vector>
 #include <map>
-#include "../BFInstructionType.h"
+
 #include "../BFDefines.h"
 #include "BFEnvironment.h"
 
-#define CellSize 8
+class BFInstruction;
+
 typedef std::pair<size_t, size_t> BFLoop; //BeginPtr, EndPtr
 
 class BFInterpreter
 {
 public:
-    explicit BFInterpreter(std::vector<BFInstructionType>& instructions, size_t cellAmount = 30720);
-    
+    explicit BFInterpreter(std::vector<BFInstruction>& instructions, size_t cellAmount = 30720);
+
     void Run();
     void Step();
-private:
-    void BuildLoopInfo();
+
+    inline bool IsFinished()
+    {
+        return _bfEnvironment.InstructionPtr <= _instructions.size();
+    }
+protected:
+    explicit BFInterpreter(size_t cellAmount);
+    explicit BFInterpreter() : BFInterpreter(30720) 
+    {}
 
     std::map<size_t, size_t> _loopInfo;
     std::map<size_t, size_t> _loopInfoReversed;
-    
+
     BFEnvironment _bfEnvironment;
+private:
+    std::vector<BFInstruction> _instructions;
     
-    bool _running;
+    void BuildLoopInfo();
+    void Construct(size_t cellAmount = 30720);
 };
 
 

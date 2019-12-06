@@ -8,9 +8,8 @@
 std::vector<BFInstructionType> BFOptimizer::OptimizeCode(std::vector<BFInstructionType> instructions)
 {
     std::vector<BFInstructionType> result = std::vector<BFInstructionType>();
-    std::queue<BFInstructionType> queuedInstructions;
-    
-    
+
+    auto it = instructions.begin();
     
     return result;
 }

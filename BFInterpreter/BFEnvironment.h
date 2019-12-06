@@ -7,6 +7,7 @@
 
 
 #include "../BFDefines.h"
+#include <cstdlib>
 
 class BFEnvironment
 {

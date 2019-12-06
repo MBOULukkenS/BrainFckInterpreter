@@ -10,60 +10,54 @@
 #include <string>
 
 #include "BFInterpreter.h"
+#include "BFInstruction.h"
 #include "../Logging.h"
 
-std::vector<BFInstructionType> _instructions;
-
-
-BFInterpreter::BFInterpreter(std::vector<BFInstructionType> &instructions, size_t cellAmount)
+BFInterpreter::BFInterpreter(std::vector<BFInstruction> &instructions, size_t cellAmount)
 {
-    _bfEnvironment = BFEnvironment(cellAmount);
-    _instructions = instructions;
-    _running = false;
+    Construct(cellAmount);
     
+    _instructions = instructions;
     BuildLoopInfo();
+}
+
+BFInterpreter::BFInterpreter(size_t cellAmount)
+{
+    Construct(cellAmount);
 }
 
 void BFInterpreter::Run()
 {
-    _running = true;
     size_t instructionCount = _instructions.size();
-    
-    while (_running)
-    {
-        if (_bfEnvironment.InstructionPtr >= instructionCount)
-        {
-            _running = false;
-            break;
-        }
-        
+    while (_bfEnvironment.InstructionPtr <= instructionCount)
+    {        
         Step();
     }
 }
 
 void BFInterpreter::Step()
 {
-    BFInstructionType currentInstruction = _instructions[_bfEnvironment.InstructionPtr];
-    switch (currentInstruction)
+    BFInstruction currentInstruction = _instructions[_bfEnvironment.InstructionPtr];
+    switch (currentInstruction.InstructionType)
     {
         case dPtrIncr:
-            _bfEnvironment.DataPtr++;
+            _bfEnvironment.DataPtr += currentInstruction.StepAmount;
             if (_bfEnvironment.DataPtr > _bfEnvironment.CellAmount)
-                LogFatal("Cell Overflow detected!!", -1);
+                LogFatal("Cell Pointer Overflow detected!!", -1);
             break;
         case dPtrDecr:
-            _bfEnvironment.DataPtr--;
+            _bfEnvironment.DataPtr -= currentInstruction.StepAmount;
             if (_bfEnvironment.DataPtr < 0)
-                LogFatal("Cell Underflow detected!!", -1);
+                LogFatal("Cell Pointer Underflow detected!!", -1);
             break;
         case IncrPtrVal:
-            _bfEnvironment.Memory[_bfEnvironment.DataPtr]++;
+            _bfEnvironment.Memory[_bfEnvironment.DataPtr] += currentInstruction.StepAmount;
             break;
         case DecrPtrVal:
-            _bfEnvironment.Memory[_bfEnvironment.DataPtr]--;
+            _bfEnvironment.Memory[_bfEnvironment.DataPtr] -= currentInstruction.StepAmount;
             break;
         case cWritePtrVal:
-            std::cout << (char)_bfEnvironment.Memory[_bfEnvironment.DataPtr];
+            putchar((char)_bfEnvironment.Memory[_bfEnvironment.DataPtr]);
             break;
         case cReadPtrVal:
             _bfEnvironment.Memory[_bfEnvironment.DataPtr] = (char)getchar();
@@ -92,9 +86,9 @@ void BFInterpreter::BuildLoopInfo()
     std::stack<size_t> loopBegins = std::stack<size_t>();
     
     size_t instructionPtr = 0;
-    for (BFInstructionType instruction : _instructions)
+    for (BFInstruction instruction : _instructions)
     {
-        switch (instruction)
+        switch (instruction.InstructionType)
         {
             case loopBegin:
                 loopBegins.push(instructionPtr);
@@ -114,4 +108,9 @@ void BFInterpreter::BuildLoopInfo()
     
     if (!loopBegins.empty())
         LogFatal("Not all loops are correctly closed!", 2);
+}
+
+void BFInterpreter::Construct(size_t cellAmount)
+{
+    _bfEnvironment = BFEnvironment(cellAmount);
 }

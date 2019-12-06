@@ -1,8 +1,7 @@
 #include <iostream>
-//#include <CLI11.hpp>
 #include "CLI11.hpp"
 
-#include "BFInstructionType.h"
+#include "BFInterpreter/BFInstruction.h"
 #include "BFInterpreter/BFInterpreter.h"
 #include "Logging.h"
 
@@ -36,9 +35,9 @@ std::string ReadFile(std::string &path)
     return result;
 }
 
-std::vector<BFInstructionType> ParseInstructions(std::string str)
+std::vector<BFInstruction> ParseInstructions(std::string str)
 {
-    std::vector<BFInstructionType> instructions = std::vector<BFInstructionType>();
+    std::vector<BFInstruction> instructions = std::vector<BFInstruction>();
     for (char c : str)
     {
         for(int instructionType : BFInstructionTypeList)
@@ -46,7 +45,7 @@ std::vector<BFInstructionType> ParseInstructions(std::string str)
             if (instructionType != c)
                 continue;
             
-            instructions.push_back((BFInstructionType) c);
+            instructions.emplace_back(BFInstruction((BFInstructionType)c));
             break;
         }
     }
@@ -56,7 +55,7 @@ std::vector<BFInstructionType> ParseInstructions(std::string str)
 int main(int argc, char **argv)
 {
     CLI::App app{"BrainFck interpreter"};
-    std::vector<BFInstructionType> instructions;
+    std::vector<BFInstruction> instructions;
 
     std::string filename;
     size_t cellCount = 30720;
@@ -73,8 +72,6 @@ int main(int argc, char **argv)
     std::string result = ReadFile(filename);
     instructions = ParseInstructions(result);
     
-    
-
     BFInterpreter interpreter(instructions, cellCount);
     interpreter.Run();
     
