@@ -4,8 +4,11 @@
 #include "BFInterpreter/BFInstruction.h"
 #include "BFInterpreter/BFInterpreter.h"
 #include "Logging.h"
+#include "BFInterpreter/BFOptimizer.h"
 
 //Max 5mb file size
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCDFAInspection"
 #define MaxFileSize 5242880
 
 std::string ReadFile(std::string &path)
@@ -35,31 +38,30 @@ std::string ReadFile(std::string &path)
     return result;
 }
 
-std::vector<BFInstruction> ParseInstructions(std::string str)
-{
-    std::vector<BFInstruction> instructions = std::vector<BFInstruction>();
-    for (char c : str)
-    {
-        for(int instructionType : BFInstructionTypeList)
-        {
-            if (instructionType != c)
-                continue;
-            
-            instructions.emplace_back(BFInstruction((BFInstructionType)c));
-            break;
-        }
-    }
-    return instructions;
-}
-
 int main(int argc, char **argv)
 {
-    CLI::App app{"BrainFck interpreter"};
-    std::vector<BFInstruction> instructions;
+    std::string appDescription("BrainF*ck interpreter");
+    
+#ifdef LargeAddressAware
+    appDescription.append(" (16-bit cells)");
+#elif HugeAddressAware
+    appDescription.append(" (32-bit cells)");
+#else
+    appDescription.append(" (8-bit cells)");
+#endif
+
+#ifdef _MSC_VER
+    appDescription.append(" {Compiled using MSVC++}");
+#elif __GNUC__
+    appDescription.append(" {Compiled using G++}");
+#endif    
+    
+    CLI::App app { appDescription };
 
     std::string filename;
     size_t cellCount = 30720;
     bool optimize = false;
+    
     app.add_option("-f,--file", filename, "BrainF*ck file to run");
     app.add_option("-c,--cells", cellCount, "Amount of cells the BrainF*ck environment is allowed to use");
     app.add_flag("-o,--optimize", optimize, "Determines whether the interpreter should optimize the supplied BrainF*ck code");
@@ -69,11 +71,17 @@ int main(int argc, char **argv)
     if (filename.empty())
         LogFatal("No file supplied, unable to continue.", 1);
     
-    std::string result = ReadFile(filename);
-    instructions = ParseInstructions(result);
+    std::string instructionsStr = ReadFile(filename);        
     
-    BFInterpreter interpreter(instructions, cellCount);
+    BFInterpreter interpreter(instructionsStr, cellCount);
+    if (optimize)
+    {
+        LogMessage("Optimization: ON");
+        interpreter.OptimizeInstructions();
+    }
+    
     interpreter.Run();
     
     return 0;
 }
+#pragma clang diagnostic pop

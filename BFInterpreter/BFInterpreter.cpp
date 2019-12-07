@@ -5,15 +5,17 @@
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
-#include <queue>
 #include <stack>
 #include <string>
+#include <utility>
 
 #include "BFInterpreter.h"
 #include "BFInstruction.h"
 #include "../Logging.h"
+#include "BFLoopInstruction.h"
+#include "BFOptimizer.h"
 
-BFInterpreter::BFInterpreter(std::vector<BFInstruction> &instructions, size_t cellAmount)
+BFInterpreter::BFInterpreter(std::vector<BFInstruction*> instructions, size_t cellAmount)
 {
     Construct(cellAmount);
     
@@ -37,24 +39,24 @@ void BFInterpreter::Run()
 
 void BFInterpreter::Step()
 {
-    BFInstruction currentInstruction = _instructions[_bfEnvironment.InstructionPtr];
-    switch (currentInstruction.InstructionType)
+    BFInstruction *currentInstruction = _instructions[_bfEnvironment.InstructionPtr];
+    switch (currentInstruction->InstructionType)
     {
         case dPtrIncr:
-            _bfEnvironment.DataPtr += currentInstruction.StepAmount;
+            _bfEnvironment.DataPtr += currentInstruction->StepAmount;
             if (_bfEnvironment.DataPtr > _bfEnvironment.CellAmount)
                 LogFatal("Cell Pointer Overflow detected!!", -1);
             break;
         case dPtrDecr:
-            _bfEnvironment.DataPtr -= currentInstruction.StepAmount;
+            _bfEnvironment.DataPtr -= currentInstruction->StepAmount;
             if (_bfEnvironment.DataPtr < 0)
                 LogFatal("Cell Pointer Underflow detected!!", -1);
             break;
         case IncrPtrVal:
-            _bfEnvironment.Memory[_bfEnvironment.DataPtr] += currentInstruction.StepAmount;
+            _bfEnvironment.Memory[_bfEnvironment.DataPtr] += currentInstruction->StepAmount;
             break;
         case DecrPtrVal:
-            _bfEnvironment.Memory[_bfEnvironment.DataPtr] -= currentInstruction.StepAmount;
+            _bfEnvironment.Memory[_bfEnvironment.DataPtr] -= currentInstruction->StepAmount;
             break;
         case cWritePtrVal:
             putchar((char)_bfEnvironment.Memory[_bfEnvironment.DataPtr]);
@@ -65,15 +67,13 @@ void BFInterpreter::Step()
         case loopBegin:
             if (_bfEnvironment.Memory[_bfEnvironment.DataPtr] != 0)
                 break;
-
-            _bfEnvironment.InstructionPtr = _loopInfo[_bfEnvironment.InstructionPtr];
-            return;
+            
+            _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
         case loopEnd:
             if (_bfEnvironment.Memory[_bfEnvironment.DataPtr] == 0)
                 break;
-
-            _bfEnvironment.InstructionPtr = _loopInfoReversed[_bfEnvironment.InstructionPtr];
-            return;
+            
+            _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
     }
 
     _bfEnvironment.InstructionPtr++;
@@ -81,14 +81,12 @@ void BFInterpreter::Step()
 
 void BFInterpreter::BuildLoopInfo()
 {
-    _loopInfo = std::map<size_t, size_t>();
-    _loopInfoReversed = std::map<size_t, size_t>();
     std::stack<size_t> loopBegins = std::stack<size_t>();
     
     size_t instructionPtr = 0;
-    for (BFInstruction instruction : _instructions)
+    for (BFInstruction *instruction : _instructions)
     {
-        switch (instruction.InstructionType)
+        switch (instruction->InstructionType)
         {
             case loopBegin:
                 loopBegins.push(instructionPtr);
@@ -97,8 +95,11 @@ void BFInterpreter::BuildLoopInfo()
                 if (loopBegins.empty())
                     LogFatal("Loop end found at '" + std::to_string(instructionPtr) + "' but there was no loop to end!", 2);
                 
-                _loopInfo.emplace(BFLoop(loopBegins.top(), instructionPtr));
-                _loopInfoReversed.emplace(BFLoop(instructionPtr, loopBegins.top()));
+                delete _instructions[loopBegins.top()];
+                delete _instructions[instructionPtr];
+                
+                _instructions[loopBegins.top()] = new BFLoopInstruction(loopBegin, instructionPtr);
+                _instructions[instructionPtr] = new BFLoopInstruction(loopEnd, loopBegins.top());
                 
                 loopBegins.pop();
                 break;
@@ -113,4 +114,29 @@ void BFInterpreter::BuildLoopInfo()
 void BFInterpreter::Construct(size_t cellAmount)
 {
     _bfEnvironment = BFEnvironment(cellAmount);
+}
+
+std::vector<BFInstruction *> BFInterpreter::ParseInstructions(const std::string &instructionsStr)
+{
+    std::vector<BFInstruction*> instructions = std::vector<BFInstruction*>();
+    for (char c : instructionsStr)
+    {
+        for(BFInstructionType instructionType : BFInstructionTypeList)
+        {
+            if (instructionType != c)
+                continue;
+
+            instructions.emplace_back(new BFInstruction((BFInstructionType)c));
+            break;
+        }
+    }
+    return instructions;
+}
+
+void BFInterpreter::OptimizeInstructions()
+{
+    LogDebug("Size before optimization: '" + std::to_string(_instructions.size()) + "'");
+    BFOptimizer::OptimizeCode(_instructions);
+    BuildLoopInfo();
+    LogDebug("Size after optimization: '" + std::to_string(_instructions.size()) + "'")
 }

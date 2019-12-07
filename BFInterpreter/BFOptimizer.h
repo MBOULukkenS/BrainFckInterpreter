@@ -12,8 +12,25 @@
 class BFOptimizer
 {
 public:
-    std::vector<BFInstructionType> OptimizeCode(std::vector<BFInstructionType> instructions);
+    static std::vector<BFInstruction*> OptimizeCode(const std::vector<BFInstruction*>& instructions);
+    static void OptimizeCode(std::vector<BFInstruction*>& instructions);
+
+private:
+    struct BFOptimizationInfo
+    {
+        BFInstructionType currentType = None;
+        size_t amount = 0;
+    };
+    
+    BFOptimizer();
+    
+    static std::vector<BFInstruction*> Optimize_Contraction(const std::vector<BFInstruction*>& instructions);
+    static std::vector<BFInstruction*> Optimize_SimpleLoops(const std::vector<BFInstruction*>& instructions);
+
+
 };
+
+
 
 
 #endif //BRAINFCKINTERPRETER_BFOPTIMIZER_H
