@@ -6,7 +6,8 @@
 #include "BFInstruction.h"
 #include "../Logging.h"
 
-BFInstruction::BFInstruction(BFInstructionType type)
+BFInstruction::BFInstruction(BFInstructionType type, BFCell stepAmount)
 {
     InstructionType = type;
+    StepAmount = stepAmount;
 }
