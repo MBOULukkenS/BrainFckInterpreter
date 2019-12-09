@@ -16,7 +16,7 @@ public:
     static void OptimizeCode(std::vector<BFInstruction*>& instructions);
 
 private:
-    struct BFOptimizationInfo
+    struct BFContractOptimizationInfo
     {
         BFInstructionType currentType = None;
         size_t amount = 0;
@@ -24,8 +24,8 @@ private:
     
     BFOptimizer();
     
-    static std::vector<BFInstruction*> Optimize_Contraction(const std::vector<BFInstruction*>& instructions);
-    static std::vector<BFInstruction*> Optimize_SimpleLoops(const std::vector<BFInstruction*>& instructions);
+    static void Optimize_Contraction(std::vector<BFInstruction*>& instructions);
+    static void Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions);
 
 
 };

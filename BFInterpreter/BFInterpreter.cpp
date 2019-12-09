@@ -52,6 +52,9 @@ void BFInterpreter::Step()
             if (_bfEnvironment.DataPtr < 0)
                 LogFatal("Cell Pointer Underflow detected!!", -1);
             break;
+       /* case ClearPtrVal:
+            _bfEnvironment.Memory[_bfEnvironment.DataPtr] = 0;
+            break;*/ //currently unused
         case IncrPtrVal:
             _bfEnvironment.Memory[_bfEnvironment.DataPtr] += currentInstruction->StepAmount;
             break;
@@ -64,12 +67,12 @@ void BFInterpreter::Step()
         case cReadPtrVal:
             _bfEnvironment.Memory[_bfEnvironment.DataPtr] = (char)getchar();
             break;
-        case loopBegin:
+        case LoopBegin:
             if (_bfEnvironment.Memory[_bfEnvironment.DataPtr] != 0)
                 break;
             
             _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
-        case loopEnd:
+        case LoopEnd:
             if (_bfEnvironment.Memory[_bfEnvironment.DataPtr] == 0)
                 break;
             
@@ -88,18 +91,18 @@ void BFInterpreter::BuildLoopInfo()
     {
         switch (instruction->InstructionType)
         {
-            case loopBegin:
+            case LoopBegin:
                 loopBegins.push(instructionPtr);
                 break;
-            case loopEnd:
+            case LoopEnd:
                 if (loopBegins.empty())
                     LogFatal("Loop end found at '" + std::to_string(instructionPtr) + "' but there was no loop to end!", 2);
                 
                 delete _instructions[loopBegins.top()];
                 delete _instructions[instructionPtr];
                 
-                _instructions[loopBegins.top()] = new BFLoopInstruction(loopBegin, instructionPtr);
-                _instructions[instructionPtr] = new BFLoopInstruction(loopEnd, loopBegins.top());
+                _instructions[loopBegins.top()] = new BFLoopInstruction(LoopBegin, instructionPtr);
+                _instructions[instructionPtr] = new BFLoopInstruction(LoopEnd, loopBegins.top());
                 
                 loopBegins.pop();
                 break;

@@ -14,10 +14,13 @@ enum BFInstructionType
     DecrPtrVal = '-', //decrement value behind pointer
     cWritePtrVal = '.', //write value behind pointer to console
     cReadPtrVal = ',', //read value from console and write to value behind pointer
-    loopBegin = '[', //begin a loop
-    loopEnd = ']' //end the loop
+    LoopBegin = '[', //begin a loop
+    LoopEnd = ']', //end the loop
+    
+    //Optimizer instructions
+    ClearPtrVal
 };
 
-const constexpr BFInstructionType BFInstructionTypeList[] = { dPtrIncr, dPtrDecr, IncrPtrVal, DecrPtrVal, cWritePtrVal, cReadPtrVal, loopBegin, loopEnd };
+const constexpr BFInstructionType BFInstructionTypeList[] = {dPtrIncr, dPtrDecr, IncrPtrVal, DecrPtrVal, cWritePtrVal, cReadPtrVal, LoopBegin, LoopEnd };
 
 #endif //BRAINFCKINTERPRETER_BFINSTRUCTIONTYPE_H

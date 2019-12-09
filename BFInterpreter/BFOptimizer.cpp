@@ -2,26 +2,32 @@
 // Created by Stijn on 05/12/2019.
 //
 
-#include <queue>
 #include <stack>
+#include <algorithm>
 #include "BFInstruction.h"
 #include "BFOptimizer.h"
+#include "../Logging.h"
+
+static const struct
+{
+    const std::vector<BFInstructionType>  ClearLoopMinus = { LoopBegin, DecrPtrVal, LoopEnd };
+    const std::vector<BFInstructionType> ClearLoopPlus = { LoopBegin, IncrPtrVal, LoopEnd };
+} BFSimpleLoopPatterns;
 
 std::vector<BFInstruction*> BFOptimizer::OptimizeCode(const std::vector<BFInstruction*>& instructions)
 {
     std::vector<BFInstruction*> result = instructions;
     
-    result = Optimize_Contraction(result);
-    //result = Optimize_SimpleLoops(result);
+    Optimize_Contraction(result);
+    //Optimize_SimpleLoops(result);
     
     return result;
 }
 
-std::vector<BFInstruction*>
-BFOptimizer::Optimize_Contraction(const std::vector<BFInstruction*>& instructions)
+void BFOptimizer::Optimize_Contraction(std::vector<BFInstruction*>& instructions)
 {
     std::vector<BFInstruction*> result = std::vector<BFInstruction*>();
-    BFOptimizationInfo optimizationInfo {};
+    BFContractOptimizationInfo optimizationInfo {};
     
     for (BFInstruction *instruction : instructions)
     {        
@@ -39,9 +45,9 @@ BFOptimizer::Optimize_Contraction(const std::vector<BFInstruction*>& instruction
             {
                 case cWritePtrVal:
                 case cReadPtrVal:
-                case loopBegin:
-                case loopEnd:
-                    result.emplace_back(new BFInstruction(instruction)); //ignore instructions not optimized by this optimizer.
+                case LoopBegin:
+                case LoopEnd:
+                    result.emplace_back(instruction); //ignore instructions not optimized by this optimizer.
                     continue;
                 default:
                     optimizationInfo.currentType = instruction->InstructionType;
@@ -51,32 +57,58 @@ BFOptimizer::Optimize_Contraction(const std::vector<BFInstruction*>& instruction
         optimizationInfo.amount++;
         delete instruction;
     }
-    
-    return result;
-}
 
-std::vector<BFInstruction*> BFOptimizer::Optimize_SimpleLoops(const std::vector<BFInstruction*>& instructions)
-{
-    std::vector<BFInstruction*> result = instructions;
-    BFOptimizationInfo optimizationInfo {};
-    
-    for (BFInstruction *instruction : instructions)
+    int i = 0;
+    for (BFInstruction *instr : result)
     {
-        switch (instruction->InstructionType)
-        {
-            case loopBegin:
-                break;
-            case loopEnd:
-                break;
-
-            case dPtrIncr:
-            case dPtrDecr:
-                break;
-        }
-        delete instruction;
+        if (instr == nullptr)
+        LogFatal("Optimizer failed: Nullptr found in instruction list at position '" + std::to_string(i) + "'!!", -5);
+        i++;
     }
     
-    return result;
+    instructions = result;
+}
+
+void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions)
+{
+    std::vector<BFInstruction*> result = std::vector<BFInstruction*>();
+    std::vector<BFInstructionType> currentPattern;
+    
+    size_t currentIndex;
+    size_t previousIndex = 0;
+   /* do
+    {
+        auto it = std::search(instructions.begin(), instructions.end(),
+                              BFSimpleLoopPatterns.ClearLoopMinus.begin(),
+                              BFSimpleLoopPatterns.ClearLoopMinus.end(),
+                              [](BFInstruction value1, BFInstructionType value2) -> bool
+                              { return (value1.InstructionType == value2); });
+        
+        currentIndex = it - instructions.begin();
+        if (it == instructions.end())
+            break;
+        
+        for (size_t i = previousIndex; i < currentIndex - 3; i++)
+        {
+            result.emplace_back(instructions[i]);
+        }
+        
+        result.emplace_back(it);
+        previousIndex = currentIndex;
+        
+    } while(currentIndex < instructions.size()); */
+    
+    
+    
+    int i = 0;
+    for (BFInstruction *instr : result)
+    {
+        if (instr == nullptr)
+            LogFatal("Optimizer failed: Nullptr found in instruction list at position '" + std::to_string(i) + "'!!", -5);
+        i++;
+    }
+    
+    instructions = result;
 }
 
 void BFOptimizer::OptimizeCode(std::vector<BFInstruction *> &instructions)

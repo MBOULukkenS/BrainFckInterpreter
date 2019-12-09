@@ -35,6 +35,7 @@ std::string ReadFile(std::string &path)
     result.assign((std::istreambuf_iterator<char>(infile)),
                   std::istreambuf_iterator<char>());
     
+    infile.close();
     return result;
 }
 
