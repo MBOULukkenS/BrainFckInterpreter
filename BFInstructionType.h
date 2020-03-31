@@ -18,7 +18,9 @@ enum BFInstructionType
     LoopEnd = ']', //end the loop
     
     //Optimizer instructions
-    ClearPtrVal
+    ClearPtrVal,
+    ModPtrVal,
+    dPtrMod,
 };
 
 const constexpr BFInstructionType BFInstructionTypeList[] = {dPtrIncr, dPtrDecr, IncrPtrVal, DecrPtrVal, cWritePtrVal, cReadPtrVal, LoopBegin, LoopEnd };

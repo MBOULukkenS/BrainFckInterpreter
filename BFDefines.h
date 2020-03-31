@@ -5,13 +5,17 @@
 #ifndef BRAINFCKINTERPRETER_BFDEFINES_H
 #define BRAINFCKINTERPRETER_BFDEFINES_H
 
+#include <stdint.h>
 
 #ifdef LargeAddressAware
-typedef int BFCell; //16-bit cell
+typedef unsigned short BFCell; //16-bit cell
+typedef short SignedBFCell;
 #elif HugeAddressAware
-typedef long BFCell; //32-bit cell
+typedef unsigned int BFCell; //32-bit cell
+typedef int SignedBFCell;
 #else
-typedef char BFCell; //8-bit cell
+typedef unsigned char BFCell; //8-bit cell
+typedef char SignedBFCell;
 #endif
 
 

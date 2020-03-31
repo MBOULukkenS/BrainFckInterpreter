@@ -6,8 +6,11 @@
 #define BRAINFCKINTERPRETER_BFENVIRONMENT_H
 
 
-#include "../BFDefines.h"
+#include "../../BFDefines.h"
 #include <cstdlib>
+#include <vector>
+
+class BFInstruction;
 
 class BFEnvironment
 {
@@ -16,9 +19,11 @@ public:
     explicit BFEnvironment(size_t cellAmount = 30270);
     
     BFCell *Memory;
-    size_t DataPtr = 0;
-    size_t InstructionPtr = 0;
+    BFCell *CurrentCell; //size_t DataPtr = 0;
     
+    const static size_t CellSize = sizeof(BFCell);
+   
+    size_t PtrMaxOffset;
     size_t CellAmount;
 private:
     

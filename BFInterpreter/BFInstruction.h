@@ -7,17 +7,17 @@
 
 
 #include "../BFInstructionType.h"
-#include "BFEnvironment.h"
+#include "../BFDefines.h"
 
 class BFInstruction
 {
 public:
-    explicit BFInstruction(BFInstructionType type, BFCell stepAmount = 1);
+    explicit BFInstruction(BFInstructionType type, int64_t stepAmount = 1);
     explicit BFInstruction(const BFInstruction *other) : BFInstruction(other->InstructionType, other->StepAmount) {}
     BFInstruction(const BFInstruction &other) : BFInstruction(other.InstructionType, other.StepAmount) {}
 
     BFInstructionType InstructionType;
-    BFCell StepAmount = 1;
+    int64_t StepAmount = 1;
 };
 
 
