@@ -46,6 +46,9 @@ void BFInterpreter::Step()
         case ModPtrVal:
             *_bfEnvironment.CurrentCell += currentInstruction->StepAmount;
             break;
+        case ClearPtrVal:
+            *_bfEnvironment.CurrentCell = 0;
+            break;
         case cWritePtrVal:
             putchar((char)*_bfEnvironment.CurrentCell);
             break;
@@ -57,11 +60,13 @@ void BFInterpreter::Step()
                 break;
             
             _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
+            break;
         case LoopEnd:
             if (*_bfEnvironment.CurrentCell == 0)
                 break;
             
             _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
+            break;
     }
 
     _bfEnvironment.InstructionPtr++;

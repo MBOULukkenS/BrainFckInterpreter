@@ -16,10 +16,23 @@ public:
     static void OptimizeCode(std::vector<BFInstruction*>& instructions);
 
 private:
-    struct BFContractOptimizationInfo
+    struct BFContractionOptimizationInfo
     {
         BFInstructionType currentType = None;
         size_t amount = 0;
+    };
+    struct BFSimpleLoopOptimizationInfo
+    {
+        enum LoopType
+        {
+            ScanLeftLoop,
+            ScanRightLoop,
+
+            ClearLoop
+        };
+        
+        LoopType loopType;
+        size_t position = 0;
     };
     
     BFOptimizer();

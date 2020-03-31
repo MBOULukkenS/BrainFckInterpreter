@@ -3,6 +3,7 @@
 //
 
 #include <stack>
+#include <queue>
 #include <algorithm>
 #include <regex>
 #include "BFInstruction.h"
@@ -11,8 +12,13 @@
 
 static const struct
 {
-    const std::vector<BFInstructionType> ClearLoopMinus = { LoopBegin, DecrPtrVal, LoopEnd };
-    const std::vector<BFInstructionType> ClearLoopPlus = { LoopBegin, IncrPtrVal, LoopEnd };
+    const std::vector<BFInstructionType> ClearLoopMinus = { DecrPtrVal };
+    const std::vector<BFInstructionType> ClearLoopPlus = { IncrPtrVal };
+
+    const std::vector<BFInstructionType> ClearLoop = { ModPtrVal };
+    
+    const std::vector<BFInstructionType> ScanLoopLeft = { dPtrDecr };
+    const std::vector<BFInstructionType> ScanLoopRight = { dPtrIncr };
 } BFSimpleLoopPatterns;
 
 void ValidateInstructions(std::vector<BFInstruction*>& instructions)
@@ -62,7 +68,7 @@ std::vector<BFInstruction*> BFOptimizer::OptimizeCode(const std::vector<BFInstru
     std::vector<BFInstruction*> result = instructions;
     
     Optimize_Contraction(result);
-    //Optimize_SimpleLoops(result);
+    Optimize_SimpleLoops(result);
     
     return result;
 }
@@ -70,14 +76,13 @@ std::vector<BFInstruction*> BFOptimizer::OptimizeCode(const std::vector<BFInstru
 void BFOptimizer::Optimize_Contraction(std::vector<BFInstruction*>& instructions)
 {
     std::vector<BFInstruction*> result = std::vector<BFInstruction*>();
-    BFContractOptimizationInfo optimizationInfo {};
+    BFContractionOptimizationInfo optimizationInfo {};
     
     for (BFInstruction *instruction : instructions)
     {
         bool isOppositeInstruction = IsOppositeInstructionType(instruction->InstructionType, optimizationInfo.currentType);
         if (instruction->InstructionType != optimizationInfo.currentType)
         {
-            
             if (optimizationInfo.currentType != None)
             {
                 if (optimizationInfo.amount > 0)
@@ -114,6 +119,74 @@ void BFOptimizer::Optimize_Contraction(std::vector<BFInstruction*>& instructions
 void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions)
 {
     std::vector<BFInstruction*> result = std::vector<BFInstruction*>();
+    
+    std::queue<BFInstruction*> allQueuedInstructions = std::queue<BFInstruction*>();
+    std::vector<BFInstruction*> queuedBodyInstructions = std::vector<BFInstruction*>();
+
+    BFSimpleLoopOptimizationInfo optimizationInfo {};
+    
+    for (BFInstruction *instruction : instructions)
+    {
+        if (instruction->InstructionType != LoopBegin
+            && allQueuedInstructions.empty())
+        {
+            result.emplace_back(instruction);
+            continue;
+        }
+
+        allQueuedInstructions.push(instruction);
+        if (instruction->InstructionType != LoopBegin && instruction->InstructionType != LoopEnd)
+        {
+            queuedBodyInstructions.emplace_back(instruction);
+            continue;
+        }
+        else if (queuedBodyInstructions.empty() && allQueuedInstructions.size() == 1)
+            continue;
+        
+        if (!queuedBodyInstructions.empty() 
+        && queuedBodyInstructions.size() == 1 
+        && instruction->InstructionType == LoopEnd)
+        {
+            bool abort = false;
+            switch (queuedBodyInstructions[0]->InstructionType)
+            {
+                //case dPtrMod:
+                //    break;
+                //case dPtrIncr:
+                //    //scan loop right TODO: Implement this
+                //    break;
+                //case dPtrDecr:
+                //    //scan loop left TODO: Implement this
+                //    break;
+                case ModPtrVal:
+                case IncrPtrVal:
+                case DecrPtrVal:
+                    result.emplace_back(new BFInstruction(ClearPtrVal));
+                    break;
+                default:
+                    abort = true;
+                    break;
+            }
+
+            if (!abort)
+            {
+                queuedBodyInstructions.clear();
+                do
+                {
+                    delete allQueuedInstructions.front();
+                    allQueuedInstructions.pop();
+                } while (!allQueuedInstructions.empty());
+                continue;
+            }
+        }
+
+        queuedBodyInstructions.clear();
+        do
+        {
+            result.emplace_back(allQueuedInstructions.front());
+            allQueuedInstructions.pop();
+        } while (!allQueuedInstructions.empty());
+    }
     
     ValidateInstructions(result);
     instructions = result;

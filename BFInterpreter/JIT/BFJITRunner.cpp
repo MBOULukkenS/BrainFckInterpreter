@@ -98,6 +98,9 @@ asmjit::Error BFJITRunner::Compile()
             case DecrPtrVal:
                 compiler.sub(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(instruction->StepAmount));
                 break;
+            case ClearPtrVal:
+                compiler.mov(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), 0);
+                break;
             case cWritePtrVal:
             {
                 compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)));
