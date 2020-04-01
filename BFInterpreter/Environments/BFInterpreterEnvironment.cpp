@@ -7,8 +7,8 @@
 
 #include "../../Logging.h"
 
-#include "../BFInstruction.h"
-#include "../BFLoopInstruction.h"
+#include "../Instructions/BFInstruction.h"
+#include "../Instructions/BFLoopInstruction.h"
 #include "BFInterpreterEnvironment.h"
 
 BFInterpreterEnvironment::BFInterpreterEnvironment(std::vector<BFInstruction *> instructions, size_t cellAmount)

@@ -6,9 +6,10 @@
 
 #include <stack>
 #include "BFJITRunner.h"
-#include "../BFLoopInstruction.h"
+#include "../Instructions/BFLoopInstruction.h"
 #include "../../Logging.h"
 #include "../BFOptimizer.h"
+#include "../Instructions/BFMutatorInstruction.h"
 
 int (*PutcharMethod)(int);
 
@@ -68,35 +69,37 @@ asmjit::Error BFJITRunner::Compile()
     
     for (BFInstruction *instruction : _instructions)
     {
+        auto *mutInstruction = (BFMutatorInstruction*)instruction;
+        
         switch (instruction->InstructionType)
         {
             case dPtrIncr:
-                compiler.add(dataPtr, abs(instruction->StepAmount));
+                compiler.add(dataPtr, abs(mutInstruction->StepAmount));
                 break;
             case dPtrDecr:
-                compiler.sub(dataPtr, abs(instruction->StepAmount));
+                compiler.sub(dataPtr, abs(mutInstruction->StepAmount));
                 break;
             case dPtrMod:
-                if (instruction->StepAmount > 0)
-                    compiler.add(dataPtr, abs(instruction->StepAmount));
-                else if (instruction->StepAmount < 0)
-                    compiler.sub(dataPtr, abs(instruction->StepAmount));
+                if (mutInstruction->StepAmount > 0)
+                    compiler.add(dataPtr, abs(mutInstruction->StepAmount));
+                else if (mutInstruction->StepAmount < 0)
+                    compiler.sub(dataPtr, abs(mutInstruction->StepAmount));
                 else
                     LogWarning("Zero pointer add instruction detected; Skipping");
                 break;
             case ModPtrVal:
-                if (instruction->StepAmount > 0)
-                    compiler.add(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(instruction->StepAmount));
-                else if (instruction->StepAmount < 0)
-                    compiler.sub(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(instruction->StepAmount));
+                if (mutInstruction->StepAmount > 0)
+                    compiler.add(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(mutInstruction->StepAmount));
+                else if (mutInstruction->StepAmount < 0)
+                    compiler.sub(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(mutInstruction->StepAmount));
                 else
                     LogWarning("Zero data add instruction detected; Skipping.");
                 break;
             case IncrPtrVal:
-                compiler.add(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(instruction->StepAmount));
+                compiler.add(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(mutInstruction->StepAmount));
                 break;
             case DecrPtrVal:
-                compiler.sub(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(instruction->StepAmount));
+                compiler.sub(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(mutInstruction->StepAmount));
                 break;
             case ClearPtrVal:
                 compiler.mov(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), 0);

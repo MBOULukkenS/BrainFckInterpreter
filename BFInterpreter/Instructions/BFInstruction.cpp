@@ -5,8 +5,7 @@
 
 #include "BFInstruction.h"
 
-BFInstruction::BFInstruction(BFInstructionType type, int64_t stepAmount)
+BFInstruction::BFInstruction(BFInstructionType type)
 {
     InstructionType = type;
-    StepAmount = stepAmount;
 }

@@ -7,7 +7,7 @@
 #include <string>
 
 #include "BFEnvironment.h"
-#include "../BFLoopInstruction.h"
+#include "../Instructions/BFLoopInstruction.h"
 #include "../../Logging.h"
 
 BFEnvironment::BFEnvironment(size_t cellAmount)

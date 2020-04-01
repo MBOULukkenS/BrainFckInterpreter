@@ -7,6 +7,7 @@
 
 enum BFInstructionType
 {
+    //Unoptimized Instructions
     None = -1,
     dPtrIncr = '>', //increment pointer
     dPtrDecr = '<', //decrement pointer
@@ -18,11 +19,15 @@ enum BFInstructionType
     LoopEnd = ']', //end the loop
     
     //Optimizer instructions
-    ClearPtrVal,
     ModPtrVal,
     dPtrMod,
+
+    ClearPtrVal,
+    
+    ScanLeft,
+    ScanRight
 };
 
-const constexpr BFInstructionType BFInstructionTypeList[] = {dPtrIncr, dPtrDecr, IncrPtrVal, DecrPtrVal, cWritePtrVal, cReadPtrVal, LoopBegin, LoopEnd };
+const constexpr BFInstructionType BFParsableInstructions[] = {dPtrIncr, dPtrDecr, IncrPtrVal, DecrPtrVal, cWritePtrVal, cReadPtrVal, LoopBegin, LoopEnd };
 
 #endif //BRAINFCKINTERPRETER_BFINSTRUCTIONTYPE_H

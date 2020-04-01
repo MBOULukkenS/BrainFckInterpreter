@@ -1,7 +1,7 @@
 #include <iostream>
 #include "CLI11.hpp"
 
-#include "BFInterpreter/BFInstruction.h"
+#include "BFInterpreter/Instructions/BFInstruction.h"
 #include "BFInterpreter/BFInterpreter.h"
 #include "Logging.h"
 #include "BFInterpreter/BFOptimizer.h"

@@ -19,7 +19,7 @@ private:
     struct BFContractionOptimizationInfo
     {
         BFInstructionType currentType = None;
-        size_t amount = 0;
+        int64_t amount = 0;
     };
     struct BFSimpleLoopOptimizationInfo
     {

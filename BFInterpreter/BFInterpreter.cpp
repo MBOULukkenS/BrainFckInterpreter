@@ -6,11 +6,14 @@
 #include <cstdio>
 #include <iostream>
 
+#include "Instructions/BFInstruction.h"
+#include "Instructions/BFLoopInstruction.h"
+#include "Instructions/BFMutatorInstruction.h"
+
 #include "BFInterpreter.h"
-#include "BFInstruction.h"
 #include "../Logging.h"
-#include "BFLoopInstruction.h"
 #include "BFOptimizer.h"
+
 
 BFInterpreter::BFInterpreter(const std::vector<BFInstruction*>& instructions, size_t cellAmount)
 {    
@@ -24,7 +27,7 @@ void BFInterpreter::Run()
 {
     size_t instructionCount = _instructions.size();
     while (_bfEnvironment.InstructionPtr < instructionCount)
-    {        
+    {
         Step();
     }
 }
@@ -36,15 +39,15 @@ void BFInterpreter::Step()
     switch (currentInstruction->InstructionType)
     {        
         case dPtrMod:
-            _bfEnvironment.CurrentCell += currentInstruction->StepAmount;
+            _bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->StepAmount;
             if (_bfEnvironment.CurrentCell < _bfEnvironment.Memory)
-                LogFatal("Cell Pointer Underflow detected!!", -1);
+                LogFatal("Cell Pointer Underflow detected!! at: " + std::to_string(_bfEnvironment.InstructionPtr), -1);
             if (_bfEnvironment.CurrentCell > _bfEnvironment.Memory + _bfEnvironment.PtrMaxOffset)
-                LogFatal("Cell Pointer Overflow detected!!", -1);
+                LogFatal("Cell Pointer Overflow detected!! at: " + std::to_string(_bfEnvironment.InstructionPtr), -1);
             
             break;
         case ModPtrVal:
-            *_bfEnvironment.CurrentCell += currentInstruction->StepAmount;
+            *_bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->StepAmount;
             break;
         case ClearPtrVal:
             *_bfEnvironment.CurrentCell = 0;
@@ -66,6 +69,8 @@ void BFInterpreter::Step()
                 break;
             
             _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
+            break;
+        default:
             break;
     }
 

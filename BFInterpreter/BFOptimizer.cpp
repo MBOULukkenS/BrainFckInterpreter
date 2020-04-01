@@ -5,10 +5,11 @@
 #include <stack>
 #include <queue>
 #include <algorithm>
-#include <regex>
-#include "BFInstruction.h"
+#include <functional>
+#include "Instructions/BFInstruction.h"
 #include "BFOptimizer.h"
 #include "../Logging.h"
+#include "Instructions/BFMutatorInstruction.h"
 
 static const struct
 {
@@ -20,6 +21,11 @@ static const struct
     const std::vector<BFInstructionType> ScanLoopLeft = { dPtrDecr };
     const std::vector<BFInstructionType> ScanLoopRight = { dPtrIncr };
 } BFSimpleLoopPatterns;
+
+bool Optimize_SimpleLoops(const std::vector<BFInstruction*> &loopBody, std::vector<BFInstruction*> &result);
+
+static std::vector<std::function<bool(const std::vector<BFInstruction*> &loopBody, 
+        std::vector<BFInstruction*> &result)>> LoopOptimizationCallbacks = { Optimize_SimpleLoops };
 
 void ValidateInstructions(std::vector<BFInstruction*>& instructions)
 {
@@ -76,40 +82,54 @@ std::vector<BFInstruction*> BFOptimizer::OptimizeCode(const std::vector<BFInstru
 void BFOptimizer::Optimize_Contraction(std::vector<BFInstruction*>& instructions)
 {
     std::vector<BFInstruction*> result = std::vector<BFInstruction*>();
-    BFContractionOptimizationInfo optimizationInfo {};
     
+    std::queue<BFMutatorInstruction*> contractingInstructions = std::queue<BFMutatorInstruction*>();
+
+    BFInstructionType currentType = None;
+
     for (BFInstruction *instruction : instructions)
     {
-        bool isOppositeInstruction = IsOppositeInstructionType(instruction->InstructionType, optimizationInfo.currentType);
-        if (instruction->InstructionType != optimizationInfo.currentType)
-        {
-            if (optimizationInfo.currentType != None)
-            {
-                if (optimizationInfo.amount > 0)
-                    result.emplace_back(new BFInstruction(optimizationInfo.currentType, optimizationInfo.amount));
-
-                optimizationInfo.amount = 0;
-                optimizationInfo.currentType = None;
-            }
-
-            switch (instruction->InstructionType)
-            {
-                case cWritePtrVal:
-                case cReadPtrVal:
-                case LoopBegin:
-                case LoopEnd:
-                    result.emplace_back(instruction); //ignore instructions not optimized by this optimizer.
-                    continue;
-                default:
-                    optimizationInfo.currentType = instruction->InstructionType;
-            }
-        }
-        if (isOppositeInstruction)
-            optimizationInfo.amount -= instruction->StepAmount;
-        else
-            optimizationInfo.amount += instruction->StepAmount;
+        BFMutatorInstruction *mutInstruction;
+        bool handledInstruction = (mutInstruction = dynamic_cast<BFMutatorInstruction*>(instruction));
         
-        delete instruction;
+        if (instruction->InstructionType != currentType 
+        && instruction->InstructionType != GetOppositeInstructionType(currentType)
+        && currentType != None
+        && !contractingInstructions.empty())
+        {
+            int64_t amount = 0;
+            
+            while (!contractingInstructions.empty())
+            {
+                BFMutatorInstruction *ins = contractingInstructions.front();
+                contractingInstructions.pop();
+
+                if (ins->InstructionType == GetOppositeInstructionType(currentType))
+                    amount -= ins->StepAmount;
+                else
+                    amount += ins->StepAmount;
+                
+                delete ins;
+            }
+
+            if (amount != 0)
+            {
+                result.emplace_back(new BFMutatorInstruction(currentType, amount));
+            }
+            
+            currentType = None;
+        }
+
+        if (!handledInstruction)
+        {
+            result.emplace_back(instruction);
+        }
+        else
+        {
+            if (currentType == None)
+                currentType = mutInstruction->InstructionType;
+            contractingInstructions.emplace(mutInstruction);
+        }
     }
     
     ValidateInstructions(result);
@@ -122,8 +142,6 @@ void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions
     
     std::queue<BFInstruction*> allQueuedInstructions = std::queue<BFInstruction*>();
     std::vector<BFInstruction*> queuedBodyInstructions = std::vector<BFInstruction*>();
-
-    BFSimpleLoopOptimizationInfo optimizationInfo {};
     
     for (BFInstruction *instruction : instructions)
     {
@@ -143,37 +161,26 @@ void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions
         else if (queuedBodyInstructions.empty() && allQueuedInstructions.size() == 1)
             continue;
         
-        if (!queuedBodyInstructions.empty() 
-        && queuedBodyInstructions.size() == 1 
+        if (!queuedBodyInstructions.empty()
         && instruction->InstructionType == LoopEnd)
         {
-            bool abort = false;
-            switch (queuedBodyInstructions[0]->InstructionType)
+            bool callbackHandled = false;
+            for (const auto &callback : LoopOptimizationCallbacks)
             {
-                //case dPtrMod:
-                //    break;
-                //case dPtrIncr:
-                //    //scan loop right TODO: Implement this
-                //    break;
-                //case dPtrDecr:
-                //    //scan loop left TODO: Implement this
-                //    break;
-                case ModPtrVal:
-                case IncrPtrVal:
-                case DecrPtrVal:
-                    result.emplace_back(new BFInstruction(ClearPtrVal));
-                    break;
-                default:
-                    abort = true;
+                if ((callbackHandled = callback(queuedBodyInstructions, result)))
                     break;
             }
 
-            if (!abort)
+            if (callbackHandled)
             {
                 queuedBodyInstructions.clear();
                 do
                 {
-                    delete allQueuedInstructions.front();
+                    BFInstruction *ins = allQueuedInstructions.front();
+                    if (std::find(result.begin(), result.end(), ins) != result.end())
+                        continue; //do not delete instructions that are still being used.
+                    
+                    delete ins;
                     allQueuedInstructions.pop();
                 } while (!allQueuedInstructions.empty());
                 continue;
@@ -190,6 +197,31 @@ void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions
     
     ValidateInstructions(result);
     instructions = result;
+}
+
+bool Optimize_SimpleLoops(const std::vector<BFInstruction*> &loopBody, std::vector<BFInstruction*> &result)
+{
+    if (loopBody.size() > 1)
+        return false;
+
+    switch (loopBody[0]->InstructionType)
+    {
+        //case dPtrMod:
+        //    break;
+        //case dPtrIncr:
+        //    //scan loop right TODO: Implement this
+        //    break;
+        //case dPtrDecr:
+        //    //scan loop left TODO: Implement this
+        //    break;
+        case ModPtrVal:
+        case IncrPtrVal:
+        case DecrPtrVal:
+            result.emplace_back(new BFInstruction(ClearPtrVal));
+            return true;
+        default:
+            return false;
+    }
 }
 
 void BFOptimizer::OptimizeCode(std::vector<BFInstruction *> &instructions)

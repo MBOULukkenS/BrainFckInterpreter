@@ -4,17 +4,18 @@
 
 #include <stack>
 #include "BFLoader.h"
-#include "BFInstruction.h"
+#include "Instructions/BFInstruction.h"
 #include "../BFInstructionType.h"
 #include "../Logging.h"
-#include "BFLoopInstruction.h"
+#include "Instructions/BFLoopInstruction.h"
+#include "Instructions/BFMutatorInstruction.h"
 
 std::vector<BFInstruction *> BFLoader::ParseInstructions(const std::string &instructionsStr)
 {
     std::vector<BFInstruction*> instructions = std::vector<BFInstruction*>();
     for (char c : instructionsStr)
     {
-        for(BFInstructionType instructionType : BFInstructionTypeList)
+        for(BFInstructionType instructionType : BFParsableInstructions)
         {
             if (instructionType != c)
                 continue;
@@ -23,16 +24,16 @@ std::vector<BFInstruction *> BFLoader::ParseInstructions(const std::string &inst
             switch (instructionType)
             {
                 case dPtrIncr:
-                    newInstruction = new BFInstruction(dPtrMod, 1);
+                    newInstruction = new BFMutatorInstruction(dPtrMod, 1);
                     break;
                 case dPtrDecr:
-                    newInstruction = new BFInstruction(dPtrMod, -1);
+                    newInstruction = new BFMutatorInstruction(dPtrMod, -1);
                     break;
                 case IncrPtrVal:
-                    newInstruction = new BFInstruction(ModPtrVal, 1);
+                    newInstruction = new BFMutatorInstruction(ModPtrVal, 1);
                     break;
                 case DecrPtrVal:
-                    newInstruction = new BFInstruction(ModPtrVal, -1);
+                    newInstruction = new BFMutatorInstruction(ModPtrVal, -1);
                     break;
                 default:
                     newInstruction = new BFInstruction(instructionType);
@@ -70,6 +71,8 @@ void BFLoader::BuildLoopInfo(std::vector<BFInstruction*> &instructions)
 
                 loopBegins.pop();
                 break;
+            default:
+                break; //Only loop instructions are needed to build loop info.
         }
         instructionPtr++;
     }

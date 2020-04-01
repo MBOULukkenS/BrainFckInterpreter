@@ -9,7 +9,7 @@
 
 #include <cstdlib>
 #include <vector>
-#include "../BFInstruction.h"
+#include "../Instructions/BFInstruction.h"
 #include "../Environments/BFEnvironment.h"
 
 #include "../../asmjit/src/asmjit/asmjit.h"
