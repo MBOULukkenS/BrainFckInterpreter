@@ -74,7 +74,6 @@ int main(int argc, char **argv)
     bool optimize = false;
     bool flush = false;
     
-    
     app.add_option("-f,--file", filename, "BrainF*ck file to run");
     app.add_option("-c,--cells", cellCount, "Amount of cells the BrainF*ck environment is allowed to use");
     app.add_flag("-o,--optimize", optimize, "Determines whether the interpreter should optimize the supplied BrainF*ck code");
@@ -126,7 +125,9 @@ int main(int argc, char **argv)
         stopwatch.Start();
 #endif
         
+        std::cout << std::string(25, '-') << "< JIT Output >" << std::string(25, '-') << std::endl;
         jitRunner.Run();
+        std::cout << std::endl << std::string(64, '-') << std::endl;
         
 #if USE_STOPWATCH
         if (useStopwatch)
@@ -135,7 +136,7 @@ int main(int argc, char **argv)
         return 0;
     }
 #endif
-    BFInterpreter interpreter(instructionsStr, cellCount);
+    BFInterpreter interpreter(instructionsStr, flush, cellCount);
     if (optimize)
     {
         LogMessage(OptimizeOnMessage);
@@ -144,8 +145,10 @@ int main(int argc, char **argv)
 #if USE_STOPWATCH
     stopwatch.Start();
 #endif
-    
+
+    std::cout << std::string(27, '-') << "< Output >" << std::string(27, '-') << std::endl;
     interpreter.Run();
+    std::cout << std::endl << std::string(64, '-') << std::endl;
     
 #if USE_STOPWATCH
     if (useStopwatch)

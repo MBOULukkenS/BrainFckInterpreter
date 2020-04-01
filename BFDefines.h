@@ -8,13 +8,13 @@
 #include <stdint.h>
 
 #ifdef LargeAddressAware
-typedef unsigned short BFCell; //16-bit cell
-typedef short SignedBFCell;
+typedef uint16_t BFCell; //16-bit cell
+typedef int16_t SignedBFCell;
 #elif HugeAddressAware
-typedef unsigned int BFCell; //32-bit cell
-typedef int SignedBFCell;
+typedef uint32_t BFCell; //32-bit cell
+typedef int32_t SignedBFCell;
 #else
-typedef unsigned char BFCell; //8-bit cell
+typedef uint8_t BFCell; //8-bit cell
 typedef char SignedBFCell;
 #endif
 

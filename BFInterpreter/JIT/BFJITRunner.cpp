@@ -11,13 +11,13 @@
 #include "../BFOptimizer.h"
 #include "../Instructions/BFMutatorInstruction.h"
 
-int (*PutcharMethod)(int);
+int (*JITPutcharMethod)(int);
 
 BFJITRunner::BFJITRunner(std::vector<BFInstruction *> instructions, size_t cellAmount)
 {
     _instructions = instructions;
     _environment = BFEnvironment(cellAmount);
-    PutcharMethod = putchar;
+    JITPutcharMethod = putchar;
 }
 
 void BFJITRunner::OptimizeInstructions()
@@ -33,7 +33,7 @@ void BFJITRunner::CompileAndRun()
     Run();
 }
 
-int FlushedPutchar(int character)
+int JITFlushedPutchar(int character)
 {
     int result = putchar(character);
     _flushall();
@@ -47,7 +47,7 @@ int DoGetchar()
 
 void BFJITRunner::SetFlushType(FlushType value)
 {
-    PutcharMethod = value == DontFlush ? putchar : FlushedPutchar;
+    JITPutcharMethod = value == DontFlush ? putchar : JITFlushedPutchar;
 }
 
 #pragma clang diagnostic push
@@ -63,7 +63,7 @@ asmjit::Error BFJITRunner::Compile()
     compiler.addFunc(asmjit::FuncSignatureT<void, BFCell*>());
 
     asmjit::x86::Gp dataPtr = compiler.newUIntPtr("dataPtr");
-    asmjit::x86::Gp tmp = compiler.newUInt8("tmp");
+    asmjit::x86::Gp tmp = compiler.newUInt32("tmp");
     
     compiler.setArg(0, dataPtr);
     
@@ -107,7 +107,7 @@ asmjit::Error BFJITRunner::Compile()
             case cWritePtrVal:
             {
                 compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)));
-                asmjit::FuncCallNode *externalCall = compiler.call(asmjit::imm(PutcharMethod),
+                asmjit::FuncCallNode *externalCall = compiler.call(asmjit::imm(JITPutcharMethod),
                                                                    asmjit::FuncSignatureT<int, int>(
                                                                            asmjit::CallConv::kIdHost));
                 externalCall->setArg(0, tmp);

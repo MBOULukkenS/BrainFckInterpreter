@@ -21,9 +21,9 @@ typedef std::pair<size_t, size_t> BFLoop; //BeginPtr, EndPtr
 class BFInterpreter
 {
 public:
-    explicit BFInterpreter(const std::vector<BFInstruction*>& instructions, size_t cellAmount = 30720);
-    explicit BFInterpreter(const std::string &instructionsStr, size_t cellAmount = 30720) 
-    : BFInterpreter(BFLoader::ParseInstructions(instructionsStr), cellAmount) {}
+    explicit BFInterpreter(const std::vector<BFInstruction*>& instructions, bool flush = false, size_t cellAmount = 30720);
+    explicit BFInterpreter(const std::string &instructionsStr, bool flush = false, size_t cellAmount = 30720) 
+    : BFInterpreter(BFLoader::ParseInstructions(instructionsStr), flush, cellAmount) {}
     
     void OptimizeInstructions();
 

@@ -254,10 +254,7 @@ std::vector<BFInstruction*> Handle_ClearLoop(const std::vector<BFInstruction*>& 
 
 std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*>& loopBody)
 {
-    int x = ((BFMutatorInstruction*)loopBody[2])->Args[0];
-    int y = ((BFMutatorInstruction*)loopBody[4])->Args[0];
-
-    return std::vector<BFInstruction *> { new BFMutatorInstruction(MultiplyPtrVal, None, { x, y }) };
+    return std::vector<BFInstruction *> { new BFMutatorInstruction(MultiplyPtrVal, None, { 0, 0 }) };
 }
 
 void BFOptimizer::OptimizeCode(std::vector<BFInstruction *> &instructions)

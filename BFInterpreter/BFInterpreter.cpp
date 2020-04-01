@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
+#include <functional>
 
 #include "Instructions/BFInstruction.h"
 #include "Instructions/BFLoopInstruction.h"
@@ -14,11 +15,24 @@
 #include "../Logging.h"
 #include "BFOptimizer.h"
 
+std::function<int(int)> InPutcharMethod;
 
-BFInterpreter::BFInterpreter(const std::vector<BFInstruction*>& instructions, size_t cellAmount)
+int InFlushedPutchar(int ch)
+{
+    int result = putchar(ch);
+    _flushall();
+    return result;
+}
+
+BFInterpreter::BFInterpreter(const std::vector<BFInstruction*>& instructions, bool flush, size_t cellAmount)
 {    
     _instructions = instructions;
     _bfEnvironment = BFInterpreterEnvironment(instructions, cellAmount);
+    
+    if (flush)
+        InPutcharMethod = InFlushedPutchar;
+    else
+        InPutcharMethod = putchar;
     
     BFLoader::BuildLoopInfo(_instructions);
 }
@@ -53,7 +67,7 @@ void BFInterpreter::Step()
             *_bfEnvironment.CurrentCell = 0;
             break;
         case cWritePtrVal:
-            putchar((char)*_bfEnvironment.CurrentCell);
+            InPutcharMethod((char)*_bfEnvironment.CurrentCell);
             break;
         case cReadPtrVal:
             *_bfEnvironment.CurrentCell = (char)getchar();
@@ -76,8 +90,6 @@ void BFInterpreter::Step()
 
     _bfEnvironment.InstructionPtr++;
 }
-
-
 
 void BFInterpreter::OptimizeInstructions()
 {
