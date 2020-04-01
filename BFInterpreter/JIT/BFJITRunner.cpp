@@ -74,39 +74,46 @@ asmjit::Error BFJITRunner::Compile()
         switch (instruction->InstructionType)
         {
             case dPtrIncr:
-                compiler.add(dataPtr, abs(mutInstruction->Args[0]));
+                compiler.add(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
                 break;
             case dPtrDecr:
-                compiler.sub(dataPtr, abs(mutInstruction->Args[0]));
+                compiler.sub(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
                 break;
             case dPtrMod:
-                if (mutInstruction->Args[0] > 0)
-                    compiler.add(dataPtr, abs(mutInstruction->Args[0]));
-                else if (mutInstruction->Args[0] < 0)
-                    compiler.sub(dataPtr, abs(mutInstruction->Args[0]));
-                else
+                if (mutInstruction->Args[0] == 0)
+                {
                     LogWarning("Zero pointer add instruction detected; Skipping");
+                    break;
+                }
+                if (mutInstruction->Args[0] > 0)
+                    compiler.add(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
+                else if (mutInstruction->Args[0] < 0)
+                    compiler.sub(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
                 break;
             case ModPtrVal:
+                if (mutInstruction->Args[0] == 0)
+                {
+                    LogWarning("Zero value add instruction detected; Skipping.");
+                    break;
+                }
+                
                 if (mutInstruction->Args[0] > 0)
-                    compiler.add(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(mutInstruction->Args[0]));
+                    compiler.add(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
                 else if (mutInstruction->Args[0] < 0)
-                    compiler.sub(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(mutInstruction->Args[0]));
-                else
-                    LogWarning("Zero data add instruction detected; Skipping.");
+                    compiler.sub(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
                 break;
             case IncrPtrVal:
-                compiler.add(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(mutInstruction->Args[0]));
+                compiler.add(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
                 break;
             case DecrPtrVal:
-                compiler.sub(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), abs(mutInstruction->Args[0]));
+                compiler.sub(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
                 break;
             case ClearPtrVal:
-                compiler.mov(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), 0);
+                compiler.mov(asmjit::x86::ptr(dataPtr, 0, CellSize), 0);
                 break;
             case cWritePtrVal:
             {
-                compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)));
+                compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, CellSize));
                 asmjit::FuncCallNode *externalCall = compiler.call(asmjit::imm(JITPutcharMethod),
                                                                    asmjit::FuncSignatureT<int, int>(
                                                                            asmjit::CallConv::kIdHost));
@@ -119,7 +126,7 @@ asmjit::Error BFJITRunner::Compile()
                                                                    asmjit::FuncSignatureT<int>(
                                                                            asmjit::CallConv::kIdHost));
                 externalCall->setRet(0, tmp);
-                compiler.mov(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), tmp);
+                compiler.mov(asmjit::x86::ptr(dataPtr, 0, CellSize), tmp);
                 break;
             }
             case LoopBegin:
@@ -128,8 +135,8 @@ asmjit::Error BFJITRunner::Compile()
                 asmjit::Label endLabel = compiler.newLabel();
 
                 compiler.bind(beginLabel);
-                compiler.cmp(asmjit::x86::ptr(dataPtr, 0, sizeof(BFCell)), 0);
-                compiler.je(endLabel);
+                compiler.cmp(asmjit::x86::ptr(dataPtr, 0, CellSize), 0);
+                compiler.jz(endLabel);
                 
                 loopStack.push(LoopLabelInfo(beginLabel, endLabel));
                 break;

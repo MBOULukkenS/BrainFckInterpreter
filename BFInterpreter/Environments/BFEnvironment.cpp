@@ -15,6 +15,6 @@ BFEnvironment::BFEnvironment(size_t cellAmount)
     CellAmount = cellAmount;
     PtrMaxOffset = cellAmount * CellSize;
     
-    Memory = (BFCell *)calloc(cellAmount, sizeof(BFCell));
+    Memory = (BFCell *)calloc(cellAmount, CellSize);
     CurrentCell = Memory;
 }

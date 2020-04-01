@@ -18,5 +18,7 @@ typedef uint8_t BFCell; //8-bit cell
 typedef char SignedBFCell;
 #endif
 
+#define CellSize sizeof(BFCell)
+
 
 #endif //BRAINFCKINTERPRETER_BFDEFINES_H

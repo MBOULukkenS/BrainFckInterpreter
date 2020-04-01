@@ -20,8 +20,6 @@ public:
     
     BFCell *Memory;
     BFCell *CurrentCell; //size_t DataPtr = 0;
-    
-    const static size_t CellSize = sizeof(BFCell);
    
     size_t PtrMaxOffset;
     size_t CellAmount;
