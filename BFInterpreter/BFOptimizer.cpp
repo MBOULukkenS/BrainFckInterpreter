@@ -3,6 +3,7 @@
 //
 
 #include <stack>
+#include <map>
 #include <queue>
 #include <algorithm>
 #include <functional>
@@ -10,22 +11,44 @@
 #include "BFOptimizer.h"
 #include "../Logging.h"
 #include "Instructions/BFMutatorInstruction.h"
+#include "Direction.h"
+
+typedef std::vector<BFInstructionType> LoopPattern;
+typedef std::function<std::vector<BFInstruction*>(const std::vector<BFInstruction*>&)> LoopPatternHandler;
+
+std::vector<BFInstruction*> Handle_ClearLoop(const std::vector<BFInstruction*>&);
+std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*>&);
 
 static const struct
 {
-    const std::vector<BFInstructionType> ClearLoopMinus = { DecrPtrVal };
-    const std::vector<BFInstructionType> ClearLoopPlus = { IncrPtrVal };
+    const LoopPattern ClearLoopMinus = { DecrPtrVal };
+    const LoopPattern ClearLoopPlus = { IncrPtrVal };
 
-    const std::vector<BFInstructionType> ClearLoop = { ModPtrVal };
+    const LoopPattern ClearLoop = { ModPtrVal };
     
-    const std::vector<BFInstructionType> ScanLoopLeft = { dPtrDecr };
-    const std::vector<BFInstructionType> ScanLoopRight = { dPtrIncr };
-} BFSimpleLoopPatterns;
+    const LoopPattern ScanLoopLeft = { dPtrDecr };
+    const LoopPattern ScanLoopRight = { dPtrIncr };
 
-bool Optimize_SimpleLoops(const std::vector<BFInstruction*> &loopBody, std::vector<BFInstruction*> &result);
+    const LoopPattern ScanLoop = { dPtrMod };
+    
+    const LoopPattern MultiplyLoop = { DecrPtrVal, dPtrIncr, ModPtrVal, dPtrIncr, ModPtrVal, dPtrDecr };
+    
+    const std::vector<LoopPattern> SimpleLoops = { 
+            ClearLoopMinus, 
+            ClearLoopPlus, 
+            ClearLoop, 
+            
+            ScanLoopLeft, 
+            ScanLoopRight,
+            ScanLoop 
+    };
+} BFLoopPatterns;
 
-static std::vector<std::function<bool(const std::vector<BFInstruction*> &loopBody, 
-        std::vector<BFInstruction*> &result)>> LoopOptimizationCallbacks = { Optimize_SimpleLoops };
+
+static std::map<LoopPattern, LoopPatternHandler> LoopPatterns = {
+        std::pair(BFLoopPatterns.ClearLoop, Handle_ClearLoop),
+        //std::pair(BFLoopPatterns.MultiplyLoop, Handle_MultiplyLoop)
+};
 
 void ValidateInstructions(std::vector<BFInstruction*>& instructions)
 {
@@ -98,6 +121,7 @@ void BFOptimizer::Optimize_Contraction(std::vector<BFInstruction*>& instructions
         && !contractingInstructions.empty())
         {
             int64_t amount = 0;
+            BFInstructionType simpleType = None;
             
             while (!contractingInstructions.empty())
             {
@@ -105,16 +129,20 @@ void BFOptimizer::Optimize_Contraction(std::vector<BFInstruction*>& instructions
                 contractingInstructions.pop();
 
                 if (ins->InstructionType == GetOppositeInstructionType(currentType))
-                    amount -= ins->StepAmount;
+                    amount -= ins->Args[0];
                 else
-                    amount += ins->StepAmount;
+                {
+                    amount += ins->Args[0];
+                    if (simpleType == None)
+                        simpleType = ins->SimpleType;
+                }
                 
                 delete ins;
             }
 
             if (amount != 0)
             {
-                result.emplace_back(new BFMutatorInstruction(currentType, amount));
+                result.emplace_back(new BFMutatorInstruction(currentType, simpleType, { amount }));
             }
             
             currentType = None;
@@ -136,12 +164,27 @@ void BFOptimizer::Optimize_Contraction(std::vector<BFInstruction*>& instructions
     instructions = result;
 }
 
+bool DetectPattern(const std::vector<BFInstruction*> &loopBody, const std::vector<BFInstructionType> &pattern)
+{
+    std::function<bool (BFInstruction* const&, BFInstructionType const&)> comparator =
+            [](BFInstruction* const& left, BFInstructionType const& right){
+                BFMutatorInstruction *mLeft = nullptr;
+                if ((mLeft = dynamic_cast<BFMutatorInstruction*>(left)))
+                    return left->InstructionType == right 
+                    || mLeft->SimpleType == right;
+                
+                return left->InstructionType == right;
+            };
+
+    return std::equal(loopBody.begin(), loopBody.end(), pattern.begin(), pattern.end(), comparator);
+}
+
 void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions)
 {
     std::vector<BFInstruction*> result = std::vector<BFInstruction*>();
     
     std::queue<BFInstruction*> allQueuedInstructions = std::queue<BFInstruction*>();
-    std::vector<BFInstruction*> queuedBodyInstructions = std::vector<BFInstruction*>();
+    std::vector<BFInstruction*> loopBody = std::vector<BFInstruction*>();
     
     for (BFInstruction *instruction : instructions)
     {
@@ -155,25 +198,30 @@ void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions
         allQueuedInstructions.push(instruction);
         if (instruction->InstructionType != LoopBegin && instruction->InstructionType != LoopEnd)
         {
-            queuedBodyInstructions.emplace_back(instruction);
+            loopBody.emplace_back(instruction);
             continue;
         }
-        else if (queuedBodyInstructions.empty() && allQueuedInstructions.size() == 1)
+        else if (loopBody.empty() && allQueuedInstructions.size() == 1)
             continue;
         
-        if (!queuedBodyInstructions.empty()
+        if (!loopBody.empty()
         && instruction->InstructionType == LoopEnd)
         {
             bool callbackHandled = false;
-            for (const auto &callback : LoopOptimizationCallbacks)
+            for (const auto &loopPattern : LoopPatterns)
             {
-                if ((callbackHandled = callback(queuedBodyInstructions, result)))
+                if ((callbackHandled = DetectPattern(loopBody, loopPattern.first)))
+                {
+                    auto newInstructions = loopPattern.second(loopBody);
+                    result.insert(result.end(), newInstructions.begin(), newInstructions.end());
+                    
                     break;
+                }
             }
 
             if (callbackHandled)
             {
-                queuedBodyInstructions.clear();
+                loopBody.clear();
                 do
                 {
                     BFInstruction *ins = allQueuedInstructions.front();
@@ -187,7 +235,7 @@ void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions
             }
         }
 
-        queuedBodyInstructions.clear();
+        loopBody.clear();
         do
         {
             result.emplace_back(allQueuedInstructions.front());
@@ -199,29 +247,17 @@ void BFOptimizer::Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions
     instructions = result;
 }
 
-bool Optimize_SimpleLoops(const std::vector<BFInstruction*> &loopBody, std::vector<BFInstruction*> &result)
+std::vector<BFInstruction*> Handle_ClearLoop(const std::vector<BFInstruction*>& loopBody)
 {
-    if (loopBody.size() > 1)
-        return false;
+    return std::vector<BFInstruction *> { new BFInstruction(ClearPtrVal) };
+}
 
-    switch (loopBody[0]->InstructionType)
-    {
-        //case dPtrMod:
-        //    break;
-        //case dPtrIncr:
-        //    //scan loop right TODO: Implement this
-        //    break;
-        //case dPtrDecr:
-        //    //scan loop left TODO: Implement this
-        //    break;
-        case ModPtrVal:
-        case IncrPtrVal:
-        case DecrPtrVal:
-            result.emplace_back(new BFInstruction(ClearPtrVal));
-            return true;
-        default:
-            return false;
-    }
+std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*>& loopBody)
+{
+    int x = ((BFMutatorInstruction*)loopBody[2])->Args[0];
+    int y = ((BFMutatorInstruction*)loopBody[4])->Args[0];
+
+    return std::vector<BFInstruction *> { new BFMutatorInstruction(MultiplyPtrVal, None, { x, y }) };
 }
 
 void BFOptimizer::OptimizeCode(std::vector<BFInstruction *> &instructions)

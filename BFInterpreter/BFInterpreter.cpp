@@ -39,7 +39,7 @@ void BFInterpreter::Step()
     switch (currentInstruction->InstructionType)
     {        
         case dPtrMod:
-            _bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->StepAmount;
+            _bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->Args[0];
             if (_bfEnvironment.CurrentCell < _bfEnvironment.Memory)
                 LogFatal("Cell Pointer Underflow detected!! at: " + std::to_string(_bfEnvironment.InstructionPtr), -1);
             if (_bfEnvironment.CurrentCell > _bfEnvironment.Memory + _bfEnvironment.PtrMaxOffset)
@@ -47,7 +47,7 @@ void BFInterpreter::Step()
             
             break;
         case ModPtrVal:
-            *_bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->StepAmount;
+            *_bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->Args[0];
             break;
         case ClearPtrVal:
             *_bfEnvironment.CurrentCell = 0;

@@ -24,16 +24,16 @@ std::vector<BFInstruction *> BFLoader::ParseInstructions(const std::string &inst
             switch (instructionType)
             {
                 case dPtrIncr:
-                    newInstruction = new BFMutatorInstruction(dPtrMod, 1);
+                    newInstruction = new BFMutatorInstruction(dPtrMod, instructionType, { 1 });
                     break;
                 case dPtrDecr:
-                    newInstruction = new BFMutatorInstruction(dPtrMod, -1);
+                    newInstruction = new BFMutatorInstruction(dPtrMod, instructionType, { -1 });
                     break;
                 case IncrPtrVal:
-                    newInstruction = new BFMutatorInstruction(ModPtrVal, 1);
+                    newInstruction = new BFMutatorInstruction(ModPtrVal, instructionType, { 1 });
                     break;
                 case DecrPtrVal:
-                    newInstruction = new BFMutatorInstruction(ModPtrVal, -1);
+                    newInstruction = new BFMutatorInstruction(ModPtrVal, instructionType, { -1 });
                     break;
                 default:
                     newInstruction = new BFInstruction(instructionType);

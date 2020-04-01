@@ -24,6 +24,8 @@ enum BFInstructionType
 
     ClearPtrVal,
     
+    MultiplyPtrVal,
+    
     ScanLeft,
     ScanRight
 };

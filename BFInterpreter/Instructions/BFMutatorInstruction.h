@@ -5,21 +5,24 @@
 #ifndef BRAINFCKINTERPRETER_BFMUTATORINSTRUCTION_H
 #define BRAINFCKINTERPRETER_BFMUTATORINSTRUCTION_H
 
+#include <utility>
+#include <vector>
 #include "BFInstruction.h"
 
 class BFMutatorInstruction : public BFInstruction
 {
 public:
-    explicit BFMutatorInstruction(BFInstructionType type, int64_t stepAmount)
-    : BFInstruction(type), StepAmount(stepAmount) {}
+    explicit BFMutatorInstruction(BFInstructionType type, BFInstructionType simpleType, std::vector<int64_t> args)
+            : BFInstruction(type), SimpleType(simpleType), Args(std::move(args)) {}
 
     explicit BFMutatorInstruction(const BFMutatorInstruction *other) 
-    : BFMutatorInstruction(other->InstructionType, other->StepAmount) {}
+            : BFMutatorInstruction(other->InstructionType, other->SimpleType, other->Args) {}
 
     BFMutatorInstruction(const BFMutatorInstruction &other) 
-    : BFMutatorInstruction(other.InstructionType, other.StepAmount) {}
+            : BFMutatorInstruction(other.InstructionType, other.SimpleType, other.Args) {}
 
-    int64_t StepAmount = 1;
+    BFInstructionType SimpleType = None;
+    std::vector<int64_t> Args;
 };
 
 #endif //BRAINFCKINTERPRETER_BFMUTATORINSTRUCTION_H
