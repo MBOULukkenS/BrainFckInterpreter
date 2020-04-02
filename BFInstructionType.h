@@ -19,6 +19,8 @@ enum BFInstructionType
     LoopEnd = ']', //end the loop
     
     //Optimizer instructions
+    SearchWildcard,
+    
     ModPtrVal,
     dPtrMod,
 

@@ -63,6 +63,10 @@ void BFInterpreter::Step()
         case ModPtrVal:
             *_bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->Args[0];
             break;
+        case MultiplyPtrVal:
+            *(_bfEnvironment.CurrentCell + ((BFMutatorInstruction*)currentInstruction)->Args[0]) += 
+                    ((*_bfEnvironment.CurrentCell) * ((BFMutatorInstruction*)currentInstruction)->Args[1]);
+            break;
         case ClearPtrVal:
             *_bfEnvironment.CurrentCell = 0;
             break;
@@ -85,7 +89,7 @@ void BFInterpreter::Step()
             _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
             break;
         default:
-            break;
+            LogFatal("Unhandled Instruction found!", -1);
     }
 
     _bfEnvironment.InstructionPtr++;

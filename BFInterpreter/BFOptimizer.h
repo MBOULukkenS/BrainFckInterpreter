@@ -19,7 +19,7 @@ private:
     BFOptimizer();
     
     static void Optimize_Contraction(std::vector<BFInstruction*>& instructions);
-    static void Optimize_SimpleLoops(std::vector<BFInstruction*>& instructions);
+    static void Optimize_Loops(std::vector<BFInstruction*>& instructions);
 };
 
 
