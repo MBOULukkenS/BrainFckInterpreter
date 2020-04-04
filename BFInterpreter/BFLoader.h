@@ -14,6 +14,7 @@ class BFLoader
 {
 public:
     static std::vector<BFInstruction *> ParseInstructions(const std::string &instructionsStr);
+    static void ExportInstructions(const std::vector<BFInstruction*> &instructions, std::ostream &output, bool lineNumbers = false);
     static void BuildLoopInfo(std::vector<BFInstruction*> &instructions);
 };
 

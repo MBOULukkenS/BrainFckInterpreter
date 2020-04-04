@@ -21,17 +21,19 @@ enum BFInstructionType
     //Optimizer instructions
     SearchWildcard,
     
-    ModPtrVal,
-    dPtrMod,
+    ModPtrVal = '~',
+    dPtrMod = '$',
 
-    ClearPtrVal,
+    ClearPtrVal = '#',
     
-    MultiplyPtrVal,
+    MultiplyPtrVal = '^',
     
-    ScanLeft,
-    ScanRight
+    ScanLeft = '(',
+    ScanRight = ')'
 };
 
 const constexpr BFInstructionType BFParsableInstructions[] = {dPtrIncr, dPtrDecr, IncrPtrVal, DecrPtrVal, cWritePtrVal, cReadPtrVal, LoopBegin, LoopEnd };
+
+BFInstructionType GetOppositeInstructionType(BFInstructionType instructionType);
 
 #endif //BRAINFCKINTERPRETER_BFINSTRUCTIONTYPE_H

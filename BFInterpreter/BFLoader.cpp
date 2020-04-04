@@ -44,6 +44,7 @@ std::vector<BFInstruction *> BFLoader::ParseInstructions(const std::string &inst
             break;
         }
     }
+    
     return instructions;
 }
 
@@ -79,4 +80,40 @@ void BFLoader::BuildLoopInfo(std::vector<BFInstruction*> &instructions)
 
     if (!loopBegins.empty())
         LogFatal("Not all loops are correctly closed!", 2);
+}
+
+void BFLoader::ExportInstructions(const std::vector<BFInstruction *> &instructions, std::ostream &output, bool lineNumbers)
+{
+    std::string outputString = std::string();
+    
+    size_t i = 0;
+    for (auto instruction : instructions)
+    {
+        if (lineNumbers)
+            output << i << ": ";
+        
+        output << (char)instruction->InstructionType;
+        
+        BFMutatorInstruction *mutatorInstruction;
+        BFLoopInstruction *loopInstruction;
+        if ((mutatorInstruction = dynamic_cast<BFMutatorInstruction*>(instruction)))
+        {
+            output << "(";
+            for (int64_t arg : mutatorInstruction->Args)
+            {
+                output << arg;
+                if (arg != mutatorInstruction->Args.back())
+                    output << ", ";
+            }
+            output << ")";
+        }
+        else if ((loopInstruction = dynamic_cast<BFLoopInstruction*>(instruction)))
+        {
+            output << "-> ";
+            output << loopInstruction->LoopOther;
+        }
+        
+        output << std::endl;
+        i++;
+    }
 }

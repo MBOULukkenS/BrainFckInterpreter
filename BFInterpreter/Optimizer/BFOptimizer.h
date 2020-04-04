@@ -7,7 +7,8 @@
 
 
 #include <vector>
-#include "../BFInstructionType.h"
+#include <queue>
+#include "../../BFInstructionType.h"
 
 class BFOptimizer
 {
@@ -17,6 +18,12 @@ public:
 
 private:
     BFOptimizer();
+    
+    struct LoopOptimizeInfo {
+        std::queue<BFInstruction*> AllQueuedInstructions = std::queue<BFInstruction*>();
+        std::vector<BFInstruction*> LoopBody = std::vector<BFInstruction*>();
+        std::vector<BFInstruction*> Output = std::vector<BFInstruction*>();
+    };
     
     static void Optimize_Contraction(std::vector<BFInstruction*>& instructions);
     static void Optimize_Loops(std::vector<BFInstruction*>& instructions);

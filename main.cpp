@@ -4,7 +4,7 @@
 #include "BFInterpreter/Instructions/BFInstruction.h"
 #include "BFInterpreter/BFInterpreter.h"
 #include "Logging.h"
-#include "BFInterpreter/BFOptimizer.h"
+#include "BFInterpreter/Optimizer/BFOptimizer.h"
 
 #define OptimizeOnMessage "Optimization: ON"
 
@@ -78,6 +78,10 @@ int main(int argc, char **argv)
     app.add_option("-c,--cells", cellCount, "Amount of cells the BrainF*ck environment is allowed to use");
     app.add_flag("-o,--optimize", optimize, "Determines whether the interpreter should optimize the supplied BrainF*ck code");
     app.add_flag("-F,--flush", flush, "Determines whether a flush to stdout should occur after each BrainF*ck 'putchar' command.");
+#ifdef DEBUG
+    bool outputInstructions = false;
+    app.add_flag("-x,--output-instructions", outputInstructions, "output the loaded code to stdout instead of executing it.");
+#endif
 #ifdef USE_JIT
     bool jit = false;
     app.add_flag("-j,--jit", jit, "Determines whether the supplied BrainF*ck code should be compiled or interpreted.");
@@ -94,6 +98,19 @@ int main(int argc, char **argv)
         LogFatal("No file supplied, unable to continue.", 1);
     
     std::string instructionsStr = ReadFile(filename);
+
+#ifdef DEBUG
+    if (outputInstructions)
+    {
+        std::vector<BFInstruction*> instructions = BFLoader::ParseInstructions(instructionsStr);
+        if (optimize)
+            BFOptimizer::OptimizeCode(instructions);
+        
+        BFLoader::BuildLoopInfo(instructions);
+        BFLoader::ExportInstructions(instructions, std::cout, true);
+        return 0;
+    }
+#endif
 
 #ifdef USE_JIT
     if (jit)

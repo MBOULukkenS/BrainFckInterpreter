@@ -13,7 +13,7 @@
 
 #include "BFInterpreter.h"
 #include "../Logging.h"
-#include "BFOptimizer.h"
+#include "Optimizer/BFOptimizer.h"
 
 std::function<int(int)> InPutcharMethod;
 
@@ -55,10 +55,23 @@ void BFInterpreter::Step()
         case dPtrMod:
             _bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->Args[0];
             if (_bfEnvironment.CurrentCell < _bfEnvironment.Memory)
+            {
+                LogError("Interpreter failed; Outputting instruction context:\n")
+                BFLoader::ExportInstructions(std::vector<BFInstruction*>(
+                        _instructions.begin() + (_bfEnvironment.InstructionPtr - 5), 
+                        _instructions.begin() + (_bfEnvironment.InstructionPtr + 5)), 
+                                std::cout);
                 LogFatal("Cell Pointer Underflow detected!! at: " + std::to_string(_bfEnvironment.InstructionPtr), -1);
+            }
             if (_bfEnvironment.CurrentCell > _bfEnvironment.Memory + _bfEnvironment.PtrMaxOffset)
+            {
+                LogError("Interpreter failed; Outputting instruction context:\n")
+                BFLoader::ExportInstructions(std::vector<BFInstruction*>(
+                        _instructions.begin() + (_bfEnvironment.InstructionPtr - 5),
+                        _instructions.begin() + (_bfEnvironment.InstructionPtr + 5)),
+                                             std::cout);
                 LogFatal("Cell Pointer Overflow detected!! at: " + std::to_string(_bfEnvironment.InstructionPtr), -1);
-            
+            }
             break;
         case ModPtrVal:
             *_bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->Args[0];
@@ -87,6 +100,8 @@ void BFInterpreter::Step()
                 break;
             
             _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
+            break;
+        case None:
             break;
         default:
             LogFatal("Unhandled Instruction found!", -1);

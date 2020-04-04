@@ -8,7 +8,7 @@
 #include "BFJITRunner.h"
 #include "../Instructions/BFLoopInstruction.h"
 #include "../../Logging.h"
-#include "../BFOptimizer.h"
+#include "../Optimizer/BFOptimizer.h"
 #include "../Instructions/BFMutatorInstruction.h"
 
 int (*JITPutcharMethod)(int);
@@ -63,7 +63,15 @@ asmjit::Error BFJITRunner::Compile()
     compiler.addFunc(asmjit::FuncSignatureT<void, BFCell*>());
 
     asmjit::x86::Gp dataPtr = compiler.newUIntPtr("dataPtr");
+    
+#ifdef LargeAddressAware
+    asmjit::x86::Gp tmp = compiler.newUInt16("tmp");
+#elif HugeAddressAware
     asmjit::x86::Gp tmp = compiler.newUInt32("tmp");
+#else
+    asmjit::x86::Gp tmp = compiler.newUInt8("tmp");
+#endif
+    
     
     compiler.setArg(0, dataPtr);
     
@@ -107,6 +115,14 @@ asmjit::Error BFJITRunner::Compile()
                 break;
             case DecrPtrVal:
                 compiler.sub(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
+                break;
+            case MultiplyPtrVal:
+                compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, CellSize));
+                if (mutInstruction->Args[1] > 1)
+                {
+                    compiler.imul(tmp, mutInstruction->Args[1]);
+                }
+                compiler.add(asmjit::x86::ptr(dataPtr, mutInstruction->Args[0] * CellSize, CellSize), tmp);
                 break;
             case ClearPtrVal:
                 compiler.mov(asmjit::x86::ptr(dataPtr, 0, CellSize), 0);
@@ -153,6 +169,9 @@ asmjit::Error BFJITRunner::Compile()
                 compiler.bind(info.CloseLabel);
                 break;
             }
+            case None:
+                compiler.nop();
+                break;
             default:
                 LogFatal("Invalid instruction found!", -2);
         }
