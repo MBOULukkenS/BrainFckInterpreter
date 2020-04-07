@@ -60,18 +60,13 @@ asmjit::Error BFJITRunner::Compile()
         
         switch (instruction->InstructionType)
         {
-            case dPtrIncr:
-                compiler.add(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
-                break;
-            case dPtrDecr:
-                compiler.sub(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
-                break;
             case dPtrMod:
                 if (mutInstruction->Args[0] == 0)
                 {
                     LogWarning("Zero pointer add instruction detected; Skipping");
                     break;
                 }
+                
                 if (mutInstruction->Args[0] > 0)
                     compiler.add(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
                 else if (mutInstruction->Args[0] < 0)
@@ -88,12 +83,6 @@ asmjit::Error BFJITRunner::Compile()
                     compiler.add(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
                 else if (mutInstruction->Args[0] < 0)
                     compiler.sub(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
-                break;
-            case IncrPtrVal:
-                compiler.add(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
-                break;
-            case DecrPtrVal:
-                compiler.sub(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
                 break;
             case MultiplyPtrVal:
                 compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, CellSize));
@@ -139,7 +128,7 @@ asmjit::Error BFJITRunner::Compile()
             case LoopEnd:
             {
                 if (loopStack.empty())
-                    LogFatal("Unclosed loop detected!", -2);
+                    LogFatal("Unopened loop detected!", -2);
 
                 LoopLabelInfo info = loopStack.top();
                 loopStack.pop();
@@ -155,6 +144,9 @@ asmjit::Error BFJITRunner::Compile()
                 LogFatal("Invalid instruction found!", -2);
         }
     }
+    
+    if (!loopStack.empty())
+        LogFatal("Unclosed loop detected!", -2);
     
     compiler.endFunc();
     compiler.finalize();
@@ -172,6 +164,9 @@ void BFJITRunner::DoRun()
 {
     if (_bfMain == nullptr)
         LogFatal("No Main function Found!", -3);
+
+    if (_instructions.empty())
+        LogFatal("No instructions to execute!", -1);
 
     _bfMain(_environment->Memory);
 }
