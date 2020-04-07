@@ -5,7 +5,6 @@
 #ifndef BRAINFCKINTERPRETER_STOPWATCH_H
 #define BRAINFCKINTERPRETER_STOPWATCH_H
 
-#ifdef USE_STOPWATCH
 // Copyright Ingo Proff 2017.
 // https://github.com/CrikeeIP/Stopwatch
 // Distributed under the MIT Software License (X11 license).
@@ -131,5 +130,4 @@ namespace Stopwatch
     constexpr Stopwatch::TimeFormat seconds = Stopwatch::TimeFormat::SECONDS;
 
 } //namespace stopwatch
-#endif
 #endif //BRAINFCKINTERPRETER_STOPWATCH_H

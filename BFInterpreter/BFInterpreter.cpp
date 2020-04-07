@@ -15,25 +15,12 @@
 #include "../Logging.h"
 #include "Optimizer/BFOptimizer.h"
 
-std::function<int(int)> InPutcharMethod;
-
-int InFlushedPutchar(int ch)
-{
-    int result = putchar(ch);
-    _flushall();
-    return result;
-}
-
 BFInterpreter::BFInterpreter(const std::vector<BFInstruction*>& instructions, bool flush, size_t cellAmount)
-{    
-    _instructions = instructions;
-    _bfEnvironment = BFInterpreterEnvironment(instructions, cellAmount);
-    
-    if (flush)
-        InPutcharMethod = InFlushedPutchar;
-    else
-        InPutcharMethod = putchar;
-    
+: BFRunner(instructions, flush)
+{
+    _environment = new BFInterpreterEnvironment(instructions, cellAmount);
+    _bfEnvironment = *((BFInterpreterEnvironment*)_environment);
+
     BFLoader::BuildLoopInfo(_instructions);
 }
 
@@ -84,10 +71,10 @@ void BFInterpreter::Step()
             *_bfEnvironment.CurrentCell = 0;
             break;
         case cWritePtrVal:
-            InPutcharMethod((char)*_bfEnvironment.CurrentCell);
+            PutcharMethod(*_bfEnvironment.CurrentCell);
             break;
         case cReadPtrVal:
-            *_bfEnvironment.CurrentCell = (char)getchar();
+            *_bfEnvironment.CurrentCell = (BFCell)getchar();
             break;
         case LoopBegin:
             if (*_bfEnvironment.CurrentCell != 0)
@@ -108,10 +95,4 @@ void BFInterpreter::Step()
     }
 
     _bfEnvironment.InstructionPtr++;
-}
-
-void BFInterpreter::OptimizeInstructions()
-{
-    BFOptimizer::OptimizeCode(_instructions);
-    BFLoader::BuildLoopInfo(_instructions);
 }

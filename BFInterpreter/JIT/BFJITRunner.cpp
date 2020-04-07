@@ -2,8 +2,6 @@
 // Created by Stijn on 12/12/2019.
 //
 
-#ifdef USE_JIT
-
 #include <stack>
 #include "BFJITRunner.h"
 #include "../Instructions/BFLoopInstruction.h"
@@ -11,13 +9,11 @@
 #include "../Optimizer/BFOptimizer.h"
 #include "../Instructions/BFMutatorInstruction.h"
 
-int (*JITPutcharMethod)(int);
-
-BFJITRunner::BFJITRunner(std::vector<BFInstruction *> instructions, size_t cellAmount)
+BFJITRunner::BFJITRunner(const std::vector<BFInstruction *>& instructions, bool flush, size_t cellAmount) 
+: BFRunner(instructions, flush)
 {
     _instructions = instructions;
-    _environment = BFEnvironment(cellAmount);
-    JITPutcharMethod = putchar;
+    _environment = new BFEnvironment(cellAmount);
 }
 
 void BFJITRunner::OptimizeInstructions()
@@ -30,24 +26,7 @@ void BFJITRunner::CompileAndRun()
     asmjit::Error result = Compile();
     if (result != 0)
         LogFatal("Compilation failed!", 1);
-    Run();
-}
-
-int JITFlushedPutchar(int character)
-{
-    int result = putchar(character);
-    _flushall();
-    return result;
-}
-
-int DoGetchar()
-{
-    return getchar();
-}
-
-void BFJITRunner::SetFlushType(FlushType value)
-{
-    JITPutcharMethod = value == DontFlush ? putchar : JITFlushedPutchar;
+    DoRun();
 }
 
 #pragma clang diagnostic push
@@ -130,8 +109,8 @@ asmjit::Error BFJITRunner::Compile()
             case cWritePtrVal:
             {
                 compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, CellSize));
-                asmjit::FuncCallNode *externalCall = compiler.call(asmjit::imm(JITPutcharMethod),
-                                                                   asmjit::FuncSignatureT<int, int>(
+                asmjit::FuncCallNode *externalCall = compiler.call(asmjit::imm(PutcharMethod),
+                                                                   asmjit::FuncSignatureT<void, int>(
                                                                            asmjit::CallConv::kIdHost));
                 externalCall->setArg(0, tmp);
                 break;
@@ -139,7 +118,7 @@ asmjit::Error BFJITRunner::Compile()
             case cReadPtrVal:
             {
                 asmjit::FuncCallNode *externalCall = compiler.call(asmjit::imm(&getchar),
-                                                                   asmjit::FuncSignatureT<int>(
+                                                                   asmjit::FuncSignatureT<void>(
                                                                            asmjit::CallConv::kIdHost));
                 externalCall->setRet(0, tmp);
                 compiler.mov(asmjit::x86::ptr(dataPtr, 0, CellSize), tmp);
@@ -186,10 +165,13 @@ asmjit::Error BFJITRunner::Compile()
 
 void BFJITRunner::Run()
 {
-    if (_bfMain == nullptr)
-        LogFatal("No Main function Found!", -3);
-    
-    _bfMain(_environment.Memory);
+    CompileAndRun();
 }
 
-#endif
+void BFJITRunner::DoRun()
+{
+    if (_bfMain == nullptr)
+        LogFatal("No Main function Found!", -3);
+
+    _bfMain(_environment->Memory);
+}

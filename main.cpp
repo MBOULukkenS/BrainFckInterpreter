@@ -3,18 +3,10 @@
 
 #include "BFInterpreter/Instructions/BFInstruction.h"
 #include "BFInterpreter/BFInterpreter.h"
+#include "BFInterpreter/JIT/BFJITRunner.h"
 #include "Logging.h"
 #include "BFInterpreter/Optimizer/BFOptimizer.h"
-
-#define OptimizeOnMessage "Optimization: ON"
-
-#ifdef USE_STOPWATCH
 #include "Stopwatch.h"
-#endif
-
-#ifdef USE_JIT
-#include "BFInterpreter/JIT/BFJITRunner.h"
-#endif
 
 //Max 5mb file size
 #pragma clang diagnostic push
@@ -51,8 +43,9 @@ std::string ReadFile(std::string &path)
 
 int main(int argc, char **argv)
 {
+    //region App Description
     std::string appDescription("BrainF*ck interpreter");
-    
+
 #ifdef LargeAddressAware
     appDescription.append(" (16-bit cells)");
 #elif HugeAddressAware
@@ -65,113 +58,94 @@ int main(int argc, char **argv)
     appDescription.append(" {Compiled using MSVC++}");
 #elif __GNUC__
     appDescription.append(" {Compiled using G++}");
-#endif    
-    
-    CLI::App app { appDescription };
+#endif
+    //endregion
+
+    //region App parameters
+
+    CLI::App app{appDescription};
+    Stopwatch::Stopwatch stopwatch;
 
     std::string filename;
     size_t cellCount = 30720;
     bool optimize = false;
     bool flush = false;
-    
+    bool useStopwatch = false;
+    bool jit = false;
+
+    //endregion
+
+    //region App flags
+
     app.add_option("-f,--file", filename, "BrainF*ck file to run");
     app.add_option("-c,--cells", cellCount, "Amount of cells the BrainF*ck environment is allowed to use");
-    app.add_flag("-o,--optimize", optimize, "Determines whether the interpreter should optimize the supplied BrainF*ck code");
-    app.add_flag("-F,--flush", flush, "Determines whether a flush to stdout should occur after each BrainF*ck 'putchar' command.");
+    app.add_flag("-o,--optimize", optimize,
+                 "Determines whether the interpreter should optimize the supplied BrainF*ck code");
+    app.add_flag("-F,--flush", flush,
+                 "Determines whether a flush to stdout should occur after each BrainF*ck 'putchar' command.");
+    app.add_flag("-j,--jit", jit, "Determines whether the supplied BrainF*ck code should be compiled or interpreted.");
+    app.add_flag("-t,--time", useStopwatch,
+                 "Whether the time the program takes to finish should be recorded and displayed");
 #ifdef DEBUG
     bool outputInstructions = false;
-    app.add_flag("-x,--output-instructions", outputInstructions, "output the loaded code to stdout instead of executing it.");
+    app.add_flag("-x,--output-instructions", outputInstructions,
+                 "output the loaded code to stdout instead of executing it.");
 #endif
-#ifdef USE_JIT
-    bool jit = false;
-    app.add_flag("-j,--jit", jit, "Determines whether the supplied BrainF*ck code should be compiled or interpreted.");
-#endif
-#ifdef USE_STOPWATCH
-    bool useStopwatch = false;
-    app.add_flag("-t,--time", useStopwatch, "Whether the time the program takes to finish should be recorded and displayed");
-    Stopwatch::Stopwatch stopwatch;
-#endif
+
+    //endregion
 
     CLI11_PARSE(app, argc, argv);
-    
+
     if (filename.empty())
         LogFatal("No file supplied, unable to continue.", 1);
-    
-    std::string instructionsStr = ReadFile(filename);
 
+    std::string instructionsStr = ReadFile(filename);
+    std::vector<BFInstruction *> instructions = BFLoader::ParseInstructions(instructionsStr);
+
+    //region Debug Output
 #ifdef DEBUG
     if (outputInstructions)
     {
-        std::vector<BFInstruction*> instructions = BFLoader::ParseInstructions(instructionsStr);
         if (optimize)
             BFOptimizer::OptimizeCode(instructions);
-        
+
         BFLoader::BuildLoopInfo(instructions);
         BFLoader::ExportInstructions(instructions, std::cout, true);
         return 0;
     }
 #endif
+    //endregion
 
-#ifdef USE_JIT
+    BFRunner *runner = (jit
+                        ? (BFRunner *) new BFJITRunner(instructions, flush, cellCount)
+                        : (BFRunner *) new BFInterpreter(instructions, flush, cellCount));
+
     if (jit)
-    {
-#if USE_STOPWATCH
-        stopwatch.Start();
-#endif
-        
-        BFJITRunner jitRunner(BFLoader::ParseInstructions(instructionsStr), cellCount);
-        if (optimize)
-        {
-            LogMessage(OptimizeOnMessage);
-            jitRunner.OptimizeInstructions();
-        }
-        
-        if (flush)
-            jitRunner.SetFlushType(DoFlush);
-        
-        asmjit::Error result = jitRunner.Compile();
-        if (result != 0)
-            LogFatal("Compilation failed!", -3);
-        
-#if USE_STOPWATCH
-        if (useStopwatch)
-            LogMessage("Optimization & Compilation finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
-#endif
-
-#if USE_STOPWATCH
-        stopwatch.Start();
-#endif
-        
-        std::cout << std::string(25, '-') << "< JIT Output >" << std::string(25, '-') << std::endl;
-        jitRunner.Run();
-        std::cout << std::endl << std::string(64, '-') << std::endl;
-        
-#if USE_STOPWATCH
-        if (useStopwatch)
-            LogMessage("Program finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
-#endif
-        return 0;
-    }
-#endif
-    BFInterpreter interpreter(instructionsStr, flush, cellCount);
+        LogMessage("JIT Enabled")
+    
     if (optimize)
     {
-        LogMessage(OptimizeOnMessage);
-        interpreter.OptimizeInstructions();
+        LogMessage("Optimization: ON");
+        
+        if (useStopwatch)
+            stopwatch.Start();
+        
+        runner->OptimizeInstructions();
+        
+        if (useStopwatch)
+            LogMessage("Optimization finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
     }
-#if USE_STOPWATCH
-    stopwatch.Start();
-#endif
+    
+    if (useStopwatch)
+        stopwatch.Start();
 
     std::cout << std::string(27, '-') << "< Output >" << std::string(27, '-') << std::endl;
-    interpreter.Run();
+    runner->Run();
     std::cout << std::endl << std::string(64, '-') << std::endl;
-    
-#if USE_STOPWATCH
+
     if (useStopwatch)
         LogMessage("Program finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
-#endif
-    
+
     return 0;
 }
 #pragma clang diagnostic pop

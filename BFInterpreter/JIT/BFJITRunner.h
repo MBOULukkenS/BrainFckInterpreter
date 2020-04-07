@@ -5,14 +5,13 @@
 #ifndef BRAINFCKINTERPRETER_BFJITRUNNER_H
 #define BRAINFCKINTERPRETER_BFJITRUNNER_H
 
-#ifdef USE_JIT
-
 #include <cstdlib>
 #include <vector>
 #include "../Instructions/BFInstruction.h"
 #include "../Environments/BFEnvironment.h"
 
 #include "../../asmjit/src/asmjit/asmjit.h"
+#include "../BFRunner.h"
 
 enum FlushType
 {
@@ -20,20 +19,17 @@ enum FlushType
     DoFlush
 };
 
-class BFJITRunner
+class BFJITRunner : public BFRunner
 {
 public:
-    BFJITRunner(std::vector<BFInstruction*> instructions, size_t cellAmount);
+    BFJITRunner(const std::vector<BFInstruction*> &instructions, bool flush, size_t cellAmount);
     
     void CompileAndRun();
-
-    void OptimizeInstructions();
-    void SetFlushType(FlushType value);
     
-    asmjit::Error Compile(std::vector<BFInstruction*> instructions);
     asmjit::Error Compile();
+    void Run() override;
     
-    void Run();
+    void OptimizeInstructions() override;
 private:
     typedef void (*BFMain)(BFCell *memoryPtr);
 
@@ -45,15 +41,10 @@ private:
         asmjit::Label CloseLabel;
     };
     
-    FlushType _flushType;
-    
-    std::vector<BFInstruction*> _instructions;
-    BFEnvironment _environment;
-    
     asmjit::JitRuntime _runtime;
     BFMain _bfMain = nullptr;
+    
+    void DoRun();
 };
-
-#endif
 
 #endif //BRAINFCKINTERPRETER_BFJITRUNNER_H
