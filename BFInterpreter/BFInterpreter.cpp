@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <iostream>
 #include <functional>
+#include <cmath>
 
 #include "Instructions/BFInstruction.h"
 #include "Instructions/BFLoopInstruction.h"
@@ -36,11 +37,12 @@ void BFInterpreter::Run()
 void BFInterpreter::Step()
 {
     BFInstruction *currentInstruction = _instructions[_bfEnvironment.InstructionPtr];
+    auto *currentMutatorInstruction = (BFMutatorInstruction*)currentInstruction;
     
     switch (currentInstruction->InstructionType)
     {        
         case dPtrMod:
-            _bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->Args[0];
+            _bfEnvironment.CurrentCell += currentMutatorInstruction->Args[0];
             if (_bfEnvironment.CurrentCell < _bfEnvironment.Memory)
             {
                 LogError("Interpreter failed; Outputting instruction context:\n")
@@ -61,12 +63,20 @@ void BFInterpreter::Step()
             }
             break;
         case ModPtrVal:
-            *_bfEnvironment.CurrentCell += ((BFMutatorInstruction*)currentInstruction)->Args[0];
+            *_bfEnvironment.CurrentCell += currentMutatorInstruction->Args[0];
             break;
         case MultiplyPtrVal:
-            *(_bfEnvironment.CurrentCell + ((BFMutatorInstruction*)currentInstruction)->Args[0]) += 
-                    ((*_bfEnvironment.CurrentCell) * ((BFMutatorInstruction*)currentInstruction)->Args[1]);
+        {
+            int64_t underflowCount = currentMutatorInstruction->Args[2];
+            BFCell currentCellValue = *_bfEnvironment.CurrentCell;
+            BFCell left =
+                    underflowCount > 1 ? (BFCell)std::ceil((static_cast<double>(std::numeric_limits<BFCell>::max() + 1)
+                        * (static_cast<double>(underflowCount) - currentCellValue)) / underflowCount) : currentCellValue;
+            
+            *(_bfEnvironment.CurrentCell + currentMutatorInstruction->Args[0]) +=
+                    (left * currentMutatorInstruction->Args[1]);
             break;
+        }
         case ClearPtrVal:
             *_bfEnvironment.CurrentCell = 0;
             break;

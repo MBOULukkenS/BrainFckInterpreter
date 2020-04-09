@@ -150,9 +150,6 @@ void BFOptimizer::Optimize_Contraction(std::vector<BFInstruction*>& instructions
 
 bool InstructionTypeComparator(BFInstruction* const& left, BFInstructionType const& right)
 {
-    if (right == SearchWildcard)
-        return true;
-
     BFMutatorInstruction *mLeft = nullptr;
     if ((mLeft = dynamic_cast<BFMutatorInstruction *>(left)))
         return left->InstructionType == right
@@ -298,11 +295,13 @@ std::vector<BFInstruction*> Handle_ClearLoop(const std::vector<BFInstruction*>& 
 
 std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*>& loopBody)
 {
-    //bool negative = ((BFMutatorInstruction*)loopBody.back())->SimpleType == dPtrIncr 
-    //        || ((BFMutatorInstruction*)loopBody.front())->SimpleType == dPtrDecr;
-    
-    //int offsetMax = ((BFMutatorInstruction*)loopBody.back())->Args[0];
     std::vector<BFInstruction *> result = std::vector<BFInstruction *>();
+    const BFMutatorInstruction *decrementor = (BFMutatorInstruction*)*(std::find_if(loopBody.begin(), loopBody.end(), [](BFInstruction* const& left){
+        BFMutatorInstruction *mLeft;
+        
+        return (mLeft = dynamic_cast<BFMutatorInstruction *>(left)) 
+        && mLeft->SimpleType == DecrPtrVal;
+    }).base());
     
     auto iterator = loopBody.begin(), end = loopBody.end();
     
@@ -321,10 +320,11 @@ std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*
         
         int64_t memOffset = ((BFMutatorInstruction*)loopBody[pos])->Args[0];
         int64_t amount = ((BFMutatorInstruction*)loopBody[pos + 1])->Args[0];
+        int64_t underflowCount = std::abs(decrementor->Args[0]);
 
         off += memOffset;
         result.emplace_back(new BFMutatorInstruction(MultiplyPtrVal, None, 
-                { off, amount }));
+                { off, amount, underflowCount }));
         
         iterator++;
     }

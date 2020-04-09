@@ -3,11 +3,19 @@
 //
 
 #include <stack>
+#include <cmath>
 #include "BFJITRunner.h"
 #include "../Instructions/BFLoopInstruction.h"
 #include "../../Logging.h"
 #include "../Optimizer/BFOptimizer.h"
 #include "../Instructions/BFMutatorInstruction.h"
+
+BFCell MultiplyUnderflowLoop(BFCell currentCellValue, int64_t underflowCount)
+{
+    int max = std::numeric_limits<uint8_t>::max() + 1;
+
+    return std::ceil(max * ((double)underflowCount - currentCellValue) / (double)underflowCount);
+}
 
 BFJITRunner::BFJITRunner(const std::vector<BFInstruction *>& instructions, bool flush, size_t cellAmount) 
 : BFRunner(instructions, flush)
@@ -42,6 +50,7 @@ asmjit::Error BFJITRunner::Compile()
     compiler.addFunc(asmjit::FuncSignatureT<void, BFCell*>());
 
     asmjit::x86::Gp dataPtr = compiler.newUIntPtr("dataPtr");
+    asmjit::x86::Gp tmpBig = compiler.newInt64("tmpBig");
     
 #ifdef LargeAddressAware
     asmjit::x86::Gp tmp = compiler.newUInt16("tmp");
@@ -88,6 +97,17 @@ asmjit::Error BFJITRunner::Compile()
                 compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, CellSize));
                 if (mutInstruction->Args[1] > 1)
                 {
+                    if (mutInstruction->Args[2] > 1)
+                    {
+                        compiler.mov(tmpBig, mutInstruction->Args[2]);
+                        asmjit::FuncCallNode *externalCall = compiler.call(asmjit::imm(&MultiplyUnderflowLoop),
+                                                                           asmjit::FuncSignatureT<BFCell, BFCell, int64_t>(
+                                                                                   asmjit::CallConv::kIdHost));
+                        externalCall->setArg(0, tmp);
+                        externalCall->setArg(1, tmpBig);
+                        
+                        externalCall->setRet(0, tmp);
+                    }
                     compiler.imul(tmp, mutInstruction->Args[1]);
                 }
                 compiler.add(asmjit::x86::ptr(dataPtr, mutInstruction->Args[0] * CellSize, CellSize), tmp);

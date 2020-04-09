@@ -45,20 +45,26 @@ int main(int argc, char **argv)
 {
     //region App Description
     std::string appDescription("BrainF*ck interpreter");
-
+    appDescription.append("\n");
+    
+    appDescription.append("\nCell size: ");
 #ifdef LargeAddressAware
-    appDescription.append(" (16-bit cells)");
+    appDescription.append("[16-bit]");
 #elif HugeAddressAware
-    appDescription.append(" (32-bit cells)");
+    appDescription.append("[32-bit]");
 #else
-    appDescription.append(" (8-bit cells)");
+    appDescription.append("[8-bit]");
 #endif
 
+    appDescription.append("\nCompiled using: ");
+    
 #ifdef _MSC_VER
-    appDescription.append(" {Compiled using MSVC++}");
+    appDescription.append("[MSVC]");
 #elif __GNUC__
-    appDescription.append(" {Compiled using G++}");
+    appDescription.append("[GCC]");
 #endif
+    
+    appDescription.append("\n");
     //endregion
 
     //region App parameters
