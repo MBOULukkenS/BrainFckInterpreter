@@ -20,8 +20,8 @@ enum BFInstructionType
     
     //Optimizer instructions
     
-    ModPtrVal = '~',
-    dPtrMod = '$',
+    ModPtrVal = 'V',
+    dPtrMod = 'P',
 
     ClearPtrVal = '#',
     
