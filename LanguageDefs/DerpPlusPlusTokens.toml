@@ -1,0 +1,14 @@
+[BFTokenDefinitions]
+DataPointerIncrement = "HERP"
+DataPointerDecrement = "DERP"
+
+IncrementCellValue = "HURR"
+DecrementCellValue = "DURR"
+
+WriteCharacter = "GIGGITY"
+ReadCharacter = "GOO"
+
+LoopBegin = "WOOPY"
+LoopEnd = "DOO"
+
+Delimiter = " "

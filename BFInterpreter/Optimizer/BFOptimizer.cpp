@@ -301,7 +301,7 @@ std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*
         
         return (mLeft = dynamic_cast<BFMutatorInstruction *>(left)) 
         && mLeft->SimpleType == DecrPtrVal;
-    }).base());
+    }));
     
     auto iterator = loopBody.begin(), end = loopBody.end();
     

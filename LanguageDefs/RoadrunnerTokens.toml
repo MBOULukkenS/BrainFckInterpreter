@@ -1,0 +1,14 @@
+[BFTokenDefinitions]
+DataPointerIncrement = "meeP"
+DataPointerDecrement = "Meep"
+
+IncrementCellValue = "mEEp"
+DecrementCellValue = "MeeP"
+
+WriteCharacter = "MEEP"
+ReadCharacter = "meep"
+
+LoopBegin = "mEEP"
+LoopEnd = "MEEp"
+
+Delimiter = " "

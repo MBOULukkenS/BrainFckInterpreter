@@ -1,0 +1,14 @@
+[BFTokenDefinitions]
+DataPointerIncrement = "a"
+DataPointerDecrement = "c"
+
+IncrementCellValue = "e"
+DecrementCellValue = "i"
+
+WriteCharacter = "j"
+ReadCharacter = "o"
+
+LoopBegin = "p"
+LoopEnd = "s"
+
+Delimiter = ""

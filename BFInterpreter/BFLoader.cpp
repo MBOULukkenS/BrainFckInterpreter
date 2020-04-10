@@ -3,9 +3,9 @@
 //
 
 #include <stack>
+#include <map>
 #include "BFLoader.h"
 #include "Instructions/BFInstruction.h"
-#include "../BFInstructionType.h"
 #include "../Logging.h"
 #include "Instructions/BFLoopInstruction.h"
 #include "Instructions/BFMutatorInstruction.h"
@@ -115,5 +115,97 @@ void BFLoader::ExportInstructions(const std::vector<BFInstruction *> &instructio
         
         output << std::endl;
         i++;
+    }
+}
+
+std::string SanitizeInstructions(const std::string &instructionsStr, const BFTokenInfo &tokenInfo)
+{
+    std::vector<char> allowedChars = std::vector<char>();
+    return std::string();
+}
+
+std::vector<BFInstruction *>
+BFLoader::ParseInstructions(const std::string &instructionsStr, const BFTokenInfo &tokenInfo)
+{
+    std::vector<BFInstruction*> instructions = std::vector<BFInstruction*>();
+    
+    auto iterator = instructionsStr.begin(), end = instructionsStr.end();
+    while (iterator != end)
+    {
+        bool success = false;
+        for (const auto& item : tokenInfo.Tokens)
+        {
+            int tokenLength = item.first.size();
+            auto fEnd = iterator + tokenLength;
+            
+            /*if (fEnd > end)
+            {
+                iterator = end;
+                break;
+            }*/
+            
+            auto result = std::equal(iterator, iterator + tokenLength, item.first.begin());
+            if (!result)
+                continue;
+
+            success = true;
+            iterator += tokenLength;
+
+            BFInstruction *newInstruction = nullptr;
+            switch (item.second)
+            {
+                case dPtrIncr:
+                    newInstruction = new BFMutatorInstruction(dPtrMod, item.second, { 1 });
+                    break;
+                case dPtrDecr:
+                    newInstruction = new BFMutatorInstruction(dPtrMod, item.second, { -1 });
+                    break;
+                case IncrPtrVal:
+                    newInstruction = new BFMutatorInstruction(ModPtrVal, item.second, { 1 });
+                    break;
+                case DecrPtrVal:
+                    newInstruction = new BFMutatorInstruction(ModPtrVal, item.second, { -1 });
+                    break;
+                default:
+                    newInstruction = new BFInstruction(item.second);
+                    break;
+            }
+            
+            instructions.emplace_back(newInstruction);
+            break;
+        }
+        if (!success && iterator != end)
+            iterator++;
+    }
+    
+    return instructions;
+}
+
+void BFLoader::ConvertToDialect(const std::vector<BFInstruction *> &instructions, const BFTokenInfo &outputFormat,
+                                std::ostream &outputStream)
+{
+    for (auto instruction : instructions)
+    {
+        BFMutatorInstruction *mutatorInstruction;
+        
+        size_t emitCount = 1;
+        BFInstructionType emitType = instruction->InstructionType;
+        
+        if ((mutatorInstruction = dynamic_cast<BFMutatorInstruction*>(instruction)))
+        {
+            emitType = mutatorInstruction->SimpleType;
+            emitCount = std::abs(mutatorInstruction->Args[0]);
+        }
+        
+        auto result = *std::find_if(outputFormat.Tokens.begin(), outputFormat.Tokens.end(), [&](const std::pair<std::string, BFInstructionType> &item){
+            return item.second == emitType;
+        });
+        
+        for (size_t i = 0; i < emitCount; i++)
+        {
+            outputStream << result.first;
+            if (instruction != instructions.back())
+                outputStream << outputFormat.Delimiter;
+        }
     }
 }

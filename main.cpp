@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include "CLI11.hpp"
 
 #include "BFInterpreter/Instructions/BFInstruction.h"
@@ -12,6 +13,26 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCDFAInspection"
 #define MaxFileSize 5242880
+
+struct {
+    std::string Filename;
+    std::string SyntaxSwapFilename;
+    size_t CellCount = 30720;
+    bool Optimize = false;
+    bool Flush = false;
+    bool UseStopwatch = false;
+    bool UseJIT = false;
+#ifdef DEBUG
+    bool OutputInstructions = false;
+#endif
+} RunnerOptions;
+
+struct {
+    std::string InputConfigPath;
+    std::string OutputConfigPath;
+    std::string InputPath;
+    std::string OutputPath;
+} ConverterOptions;
 
 std::string ReadFile(std::string &path)
 {
@@ -39,6 +60,82 @@ std::string ReadFile(std::string &path)
     
     infile.close();
     return result;
+}
+
+void ConverterCallback()
+{    
+    bool outputToFile = !ConverterOptions.OutputPath.empty();
+    
+    std::ofstream outputFile;
+    if (outputToFile)
+        outputFile.open(ConverterOptions.OutputPath);
+
+    std::string input = ReadFile(ConverterOptions.InputPath);
+    
+    BFTokenInfo inputTokenInfo = ConverterOptions.InputConfigPath.empty() 
+            ? BFTokenInfo::Default() 
+            : BFTokenInfo(ConverterOptions.InputConfigPath);
+    
+    BFTokenInfo outputTokenInfo = BFTokenInfo(ConverterOptions.OutputConfigPath);
+    
+    std::vector<BFInstruction*> instructions = BFLoader::ParseInstructions(input, inputTokenInfo);
+    BFLoader::ConvertToDialect(instructions, outputTokenInfo, outputToFile ? outputFile : std::cout);
+}
+
+void RunnerCallback()
+{
+    Stopwatch::Stopwatch stopwatch;
+    BFTokenInfo tokenInfo = BFTokenInfo::Default();
+
+    if (!RunnerOptions.SyntaxSwapFilename.empty())
+        tokenInfo = BFTokenInfo(RunnerOptions.SyntaxSwapFilename);
+
+    std::string instructionsStr = ReadFile(RunnerOptions.Filename);
+    std::vector<BFInstruction *> instructions = BFLoader::ParseInstructions(instructionsStr, tokenInfo);
+
+    //region Debug Output
+#ifdef DEBUG
+    if (RunnerOptions.OutputInstructions)
+    {
+        if (RunnerOptions.Optimize)
+            BFOptimizer::OptimizeCode(instructions);
+
+        BFLoader::BuildLoopInfo(instructions);
+        BFLoader::ExportInstructions(instructions, std::cout, true);
+        return;
+    }
+#endif
+    //endregion
+
+    BFRunner *bfRunner = (RunnerOptions.UseJIT
+                          ? (BFRunner *) new BFJITRunner(instructions, RunnerOptions.Flush, RunnerOptions.CellCount)
+                          : (BFRunner *) new BFInterpreter(instructions, RunnerOptions.Flush, RunnerOptions.CellCount));
+
+    if (RunnerOptions.UseJIT)
+        LogMessage("JIT Enabled")
+
+    if (RunnerOptions.Optimize)
+    {
+        LogMessage("Optimization: ON");
+
+        if (RunnerOptions.UseStopwatch)
+            stopwatch.Start();
+
+        bfRunner->OptimizeInstructions();
+
+        if (RunnerOptions.UseStopwatch)
+            LogMessage("Optimization finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
+    }
+
+    if (RunnerOptions.UseStopwatch)
+        stopwatch.Start();
+
+    std::cout << std::string(27, '-') << "< Output >" << std::string(27, '-') << std::endl;
+    bfRunner->Run();
+    std::cout << std::endl << std::string(64, '-') << std::endl;
+
+    if (RunnerOptions.UseStopwatch)
+        LogMessage("Program finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
 }
 
 int main(int argc, char **argv)
@@ -70,88 +167,49 @@ int main(int argc, char **argv)
     //region App parameters
 
     CLI::App app{appDescription};
-    Stopwatch::Stopwatch stopwatch;
-
-    std::string filename;
-    size_t cellCount = 30720;
-    bool optimize = false;
-    bool flush = false;
-    bool useStopwatch = false;
-    bool jit = false;
+    app.require_subcommand();
+    app.ignore_case();
+    
+    CLI::App *converter = app.add_subcommand("Convert", "brainf*ck dialect/syntax swap converter");
+    CLI::App *runner = app.add_subcommand("Run", "brainf*ck runner");
 
     //endregion
 
-    //region App flags
+    //region Runner options
+    
+    runner->callback(RunnerCallback);
 
-    app.add_option("-f,--file", filename, "BrainF*ck file to run");
-    app.add_option("-c,--cells", cellCount, "Amount of cells the BrainF*ck environment is allowed to use");
-    app.add_flag("-o,--optimize", optimize,
+    runner->add_option("file", RunnerOptions.Filename, "BrainF*ck file to run")->required(true);
+    runner->add_option("-i,--instructions-config", RunnerOptions.SyntaxSwapFilename, "BrainF*ck syntax swap configuration file");
+    runner->add_option("-c,--cells", RunnerOptions.CellCount, "Amount of cells the BrainF*ck environment is allowed to use");
+    runner->add_flag("-o,--optimize", RunnerOptions.Optimize,
                  "Determines whether the interpreter should optimize the supplied BrainF*ck code");
-    app.add_flag("-F,--flush", flush,
+    runner->add_flag("-F,--flush", RunnerOptions.Flush,
                  "Determines whether a flush to stdout should occur after each BrainF*ck 'putchar' command.");
-    app.add_flag("-j,--jit", jit, "Determines whether the supplied BrainF*ck code should be compiled or interpreted.");
-    app.add_flag("-t,--time", useStopwatch,
+    runner->add_flag("-j,--jit", RunnerOptions.UseJIT, "Determines whether the supplied BrainF*ck code should be compiled or interpreted.");
+    runner->add_flag("-t,--time", RunnerOptions.UseStopwatch,
                  "Whether the time the program takes to finish should be recorded and displayed");
 #ifdef DEBUG
-    bool outputInstructions = false;
-    app.add_flag("-x,--output-instructions", outputInstructions,
+    app.add_flag("-x,--output-instructions", RunnerOptions.OutputInstructions,
                  "output the loaded code to stdout instead of executing it.");
 #endif
 
     //endregion
+    
+    //region Converter options
+    
+    converter->callback(ConverterCallback);
 
-    CLI11_PARSE(app, argc, argv);
+    converter->add_option("OutputConfigPath", ConverterOptions.OutputConfigPath, "Output dialect configuration file path")->required();
+    converter->add_option("InputProgramPath", ConverterOptions.InputPath, "Input program file path")->required();
 
-    if (filename.empty())
-        LogFatal("No file supplied, unable to continue.", 1);
-
-    std::string instructionsStr = ReadFile(filename);
-    std::vector<BFInstruction *> instructions = BFLoader::ParseInstructions(instructionsStr);
-
-    //region Debug Output
-#ifdef DEBUG
-    if (outputInstructions)
-    {
-        if (optimize)
-            BFOptimizer::OptimizeCode(instructions);
-
-        BFLoader::BuildLoopInfo(instructions);
-        BFLoader::ExportInstructions(instructions, std::cout, true);
-        return 0;
-    }
-#endif
+    converter->add_option("OutputProgramPath", ConverterOptions.OutputPath, "Converted program output file path");
+    converter->add_option("InputConfigPath", ConverterOptions.InputConfigPath, "Input dialect configuration file path");
+    
     //endregion
 
-    BFRunner *runner = (jit
-                        ? (BFRunner *) new BFJITRunner(instructions, flush, cellCount)
-                        : (BFRunner *) new BFInterpreter(instructions, flush, cellCount));
-
-    if (jit)
-        LogMessage("JIT Enabled")
+    CLI11_PARSE(app, argc, argv);
     
-    if (optimize)
-    {
-        LogMessage("Optimization: ON");
-        
-        if (useStopwatch)
-            stopwatch.Start();
-        
-        runner->OptimizeInstructions();
-        
-        if (useStopwatch)
-            LogMessage("Optimization finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
-    }
-    
-    if (useStopwatch)
-        stopwatch.Start();
-
-    std::cout << std::string(27, '-') << "< Output >" << std::string(27, '-') << std::endl;
-    runner->Run();
-    std::cout << std::endl << std::string(64, '-') << std::endl;
-
-    if (useStopwatch)
-        LogMessage("Program finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
-
     return 0;
 }
 #pragma clang diagnostic pop

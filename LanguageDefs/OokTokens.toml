@@ -1,0 +1,14 @@
+[BFTokenDefinitions]
+DataPointerIncrement = "Ook. Ook?"
+DataPointerDecrement = "Ook?. Ook."
+
+IncrementCellValue = "Ook. Ook."
+DecrementCellValue = "Ook! Ook!"
+
+WriteCharacter = "Ook! Ook."
+ReadCharacter = "Ook. Ook!"
+
+LoopBegin = "Ook! Ook?"
+LoopEnd = "Ook? Ook!"
+
+Delimiter = " "
