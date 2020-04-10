@@ -87,16 +87,33 @@ void BFLoader::ExportInstructions(const std::vector<BFInstruction *> &instructio
     std::string outputString = std::string();
     
     size_t i = 0;
+    size_t currentIndentDepth = 0;
+    
     for (auto instruction : instructions)
     {
+        auto *mutatorInstruction = dynamic_cast<BFMutatorInstruction*>(instruction);
+        auto *loopInstruction = dynamic_cast<BFLoopInstruction*>(instruction);
+        
         if (lineNumbers)
             output << i << ": ";
         
+        if (loopInstruction != nullptr 
+        && loopInstruction->InstructionType == LoopEnd 
+        && currentIndentDepth != 0)
+            currentIndentDepth--;
+        
+        output << std::string(currentIndentDepth, '\t');
         output << (char)instruction->InstructionType;
         
-        BFMutatorInstruction *mutatorInstruction;
-        BFLoopInstruction *loopInstruction;
-        if ((mutatorInstruction = dynamic_cast<BFMutatorInstruction*>(instruction)))
+        if (loopInstruction != nullptr)
+        {
+            if (loopInstruction->InstructionType == LoopBegin)
+                currentIndentDepth++;
+
+            output << " -> ";
+            output << loopInstruction->LoopOther;
+        }
+        else if (mutatorInstruction != nullptr)
         {
             output << "(";
             for (auto it = mutatorInstruction->Args.begin(); it != mutatorInstruction->Args.end(); ++it)
@@ -106,11 +123,6 @@ void BFLoader::ExportInstructions(const std::vector<BFInstruction *> &instructio
                     output << ", ";
             }
             output << ")";
-        }
-        else if ((loopInstruction = dynamic_cast<BFLoopInstruction*>(instruction)))
-        {
-            output << "-> ";
-            output << loopInstruction->LoopOther;
         }
         
         output << std::endl;
