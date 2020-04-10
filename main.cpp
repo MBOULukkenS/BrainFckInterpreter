@@ -190,7 +190,7 @@ int main(int argc, char **argv)
     runner->add_flag("-t,--time", RunnerOptions.UseStopwatch,
                  "Whether the time the program takes to finish should be recorded and displayed");
 #ifdef DEBUG
-    app.add_flag("-x,--output-instructions", RunnerOptions.OutputInstructions,
+    runner->add_flag("-x,--output-instructions", RunnerOptions.OutputInstructions,
                  "output the loaded code to stdout instead of executing it.");
 #endif
 

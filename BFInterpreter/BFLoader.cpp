@@ -99,10 +99,10 @@ void BFLoader::ExportInstructions(const std::vector<BFInstruction *> &instructio
         if ((mutatorInstruction = dynamic_cast<BFMutatorInstruction*>(instruction)))
         {
             output << "(";
-            for (int64_t arg : mutatorInstruction->Args)
+            for (auto it = mutatorInstruction->Args.begin(); it != mutatorInstruction->Args.end(); ++it)
             {
-                output << arg;
-                if (arg != mutatorInstruction->Args.back())
+                output << *it;
+                if (std::next(it) != mutatorInstruction->Args.end())
                     output << ", ";
             }
             output << ")";
@@ -136,13 +136,6 @@ BFLoader::ParseInstructions(const std::string &instructionsStr, const BFTokenInf
         for (const auto& item : tokenInfo.Tokens)
         {
             int tokenLength = item.first.size();
-            auto fEnd = iterator + tokenLength;
-            
-            /*if (fEnd > end)
-            {
-                iterator = end;
-                break;
-            }*/
             
             auto result = std::equal(iterator, iterator + tokenLength, item.first.begin());
             if (!result)
