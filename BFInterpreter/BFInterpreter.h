@@ -25,7 +25,8 @@ public:
     : BFInterpreter(BFLoader::ParseInstructions(instructionsStr), flush, cellAmount) {}
 
     void Run() override;
-    void Step();
+
+    __forceinline void Step();
 protected:
     BFInterpreterEnvironment _bfEnvironment;
 };
