@@ -101,9 +101,9 @@ asmjit::Error BFJITRunner::Compile()
                 }
                 
                 if (mutInstruction->Args[0] > 0)
-                    compiler.add(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
+                    compiler.add(dataPtr, std::abs(mutInstruction->Args[0]) * CellSize);
                 else if (mutInstruction->Args[0] < 0)
-                    compiler.sub(dataPtr, abs(mutInstruction->Args[0]) * CellSize);
+                    compiler.sub(dataPtr, std::abs(mutInstruction->Args[0]) * CellSize);
                 break;
             case ModPtrVal:
                 if (mutInstruction->Args[0] == 0)
@@ -113,9 +113,9 @@ asmjit::Error BFJITRunner::Compile()
                 }
                 
                 if (mutInstruction->Args[0] > 0)
-                    compiler.add(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
+                    compiler.add(asmjit::x86::ptr(dataPtr, 0, CellSize), std::abs(mutInstruction->Args[0]));
                 else if (mutInstruction->Args[0] < 0)
-                    compiler.sub(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
+                    compiler.sub(asmjit::x86::ptr(dataPtr, 0, CellSize), std::abs(mutInstruction->Args[0]));
                 break;
             case MultiplyPtrVal:
             {
