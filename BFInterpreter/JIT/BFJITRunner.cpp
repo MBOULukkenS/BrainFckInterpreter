@@ -10,6 +10,30 @@
 #include "../Optimizer/BFOptimizer.h"
 #include "../Instructions/BFMutatorInstruction.h"
 
+int FindExponent(int value, int multiple, int &remainder)
+{
+    remainder = 0;
+    
+    if (value != multiple && (value % multiple != 0 || (value / multiple) % multiple != 0))
+        return -1;
+
+    int result;
+    int valueTemp = value;
+
+    for (result = 1; valueTemp != multiple; result++)
+    {
+        valueTemp /= multiple;
+
+        if (valueTemp < multiple || valueTemp % multiple != 0)
+        {
+            remainder = valueTemp;
+            break;
+        }
+    }
+
+    return result;
+}
+
 BFCell MultiplyUnderflowLoop(BFCell currentCellValue, int64_t underflowCount)
 {
     int max = std::numeric_limits<uint8_t>::max() + 1;
@@ -94,10 +118,14 @@ asmjit::Error BFJITRunner::Compile()
                     compiler.sub(asmjit::x86::ptr(dataPtr, 0, CellSize), abs(mutInstruction->Args[0]));
                 break;
             case MultiplyPtrVal:
+            {
+                int64_t multiplier = mutInstruction->Args[1];
+                int64_t predictedUnderflows = mutInstruction->Args[2];
+                
                 compiler.movzx(tmp, asmjit::x86::ptr(dataPtr, 0, CellSize));
-                if (mutInstruction->Args[1] > 1)
+                if (multiplier > 1)
                 {
-                    if (mutInstruction->Args[2] > 1)
+                    if (predictedUnderflows > 1)
                     {
                         compiler.mov(tmpBig, mutInstruction->Args[2]);
                         asmjit::FuncCallNode *externalCall = compiler.call(asmjit::imm(&MultiplyUnderflowLoop),
@@ -105,13 +133,24 @@ asmjit::Error BFJITRunner::Compile()
                                                                                    asmjit::CallConv::kIdHost));
                         externalCall->setArg(0, tmp);
                         externalCall->setArg(1, tmpBig);
-                        
+
                         externalCall->setRet(0, tmp);
                     }
-                    compiler.imul(tmp, mutInstruction->Args[1]);
+                    
+                    int remainder;
+                    int exponent = FindExponent(multiplier, 2, remainder);
+                    
+                    if (exponent <= 0)
+                        compiler.imul(tmp, (remainder > 0 ? remainder : multiplier));
+                    
+                    if (exponent > 1) // if multiplier is a nth power of two...
+                        compiler.sal(tmp, exponent); //... use a shift left instead of an imul
+                    else if (exponent > 0)
+                        compiler.add(tmp, tmp); //if exponent is 1, square tmp instead of multiplying
                 }
                 compiler.add(asmjit::x86::ptr(dataPtr, mutInstruction->Args[0] * CellSize, CellSize), tmp);
                 break;
+            }
             case ClearPtrVal:
                 compiler.mov(asmjit::x86::ptr(dataPtr, 0, CellSize), 0);
                 break;
