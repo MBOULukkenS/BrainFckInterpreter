@@ -23,6 +23,8 @@ public:
    
     size_t PtrMaxOffset;
     size_t CellAmount;
+    
+    size_t MemoryDumpIndex = 0;
 private:
     
 };

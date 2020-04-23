@@ -19,7 +19,7 @@ std::cout << "[*] " << message << std::endl;           \
 
 #define LogError(message) \
 {                                            \
-std::cout << "[!] " << message << std::endl;           \
+std::cerr << "[!] " << message << std::endl;           \
 }
 
 #ifdef DEBUG
@@ -33,7 +33,7 @@ std::cout << "[?] " << message << std::endl;           \
 
 #define LogFatal(message, exitCode) \
 {                                            \
-std::cout << "[!!!] " << message << std::endl;           \
+std::cerr << "[!!!] " << message << std::endl;           \
 exit(exitCode);                              \
 }
 

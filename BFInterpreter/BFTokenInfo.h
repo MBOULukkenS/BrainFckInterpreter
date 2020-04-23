@@ -38,7 +38,16 @@ public:
         }
         catch (...)
         {
-            Delimiter = "";
+            Delimiter = Default().Delimiter;
+        }
+
+        try
+        {
+            DumpMemoryToken = toml::find<std::string>(tokenDefs, "DumpMemory");
+        }
+        catch (...)
+        {
+            DumpMemoryToken = Default().DumpMemoryToken;
         }
         
         InitTokens();
@@ -58,6 +67,8 @@ public:
     
     std::string LoopBeginToken;
     std::string LoopEndToken;
+
+    std::string DumpMemoryToken;
     
     std::string Delimiter;
     
@@ -80,6 +91,8 @@ public:
         
         result.Delimiter = "";
         
+        result.DumpMemoryToken = std::string(1, DumpMemory);
+        
         result.InitTokens();
         return result;
     }
@@ -99,7 +112,9 @@ private:
                 std::pair(ReadCharacterToken, cReadPtrVal),
 
                 std::pair(LoopBeginToken, LoopBegin),
-                std::pair(LoopEndToken, LoopEnd)
+                std::pair(LoopEndToken, LoopEnd),
+
+                std::pair(DumpMemoryToken, DumpMemory)
         };
     }
     

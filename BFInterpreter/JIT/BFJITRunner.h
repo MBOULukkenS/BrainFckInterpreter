@@ -22,7 +22,7 @@ enum FlushType
 class BFJITRunner : public BFRunner
 {
 public:
-    BFJITRunner(const std::vector<BFInstruction*> &instructions, bool flush, size_t cellAmount);
+    BFJITRunner(const std::vector<BFInstruction*> &instructions, bool flush, bool enableDump, size_t cellAmount);
     
     void CompileAndRun();
     

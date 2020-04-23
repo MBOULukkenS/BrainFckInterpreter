@@ -15,10 +15,10 @@
 #include "../Instructions/BFMutatorInstruction.h"
 
 typedef std::vector<BFInstructionType> LoopPattern;
-typedef std::function<std::vector<BFInstruction*>(const std::vector<BFInstruction*>&)> LoopPatternHandler;
+typedef std::function<bool(const std::vector<BFInstruction*>&, std::vector<BFInstruction*>&)> LoopPatternHandler;
 
-std::vector<BFInstruction*> Handle_ClearLoop(const std::vector<BFInstruction*>&);
-std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*>&);
+bool Handle_ClearLoop(const std::vector<BFInstruction*>& loopBody, std::vector<BFInstruction*> &result);
+bool Handle_MultiplyLoop(const std::vector<BFInstruction*>& loopBody, std::vector<BFInstruction*> &result);
 
 static const struct
 {
@@ -232,10 +232,26 @@ void BFOptimizer::Optimize_Loops(std::vector<BFInstruction*>& instructions)
                 
                 if ((callbackHandled = DetectPattern(currentLoop.LoopBody, loopPattern.first, true)))
                 {
-                    auto newInstructions = loopPattern.second(currentLoop.LoopBody);
-                    std::reverse(newInstructions.begin(), newInstructions.end());
+                    std::vector<BFInstruction*> newInstructions = std::vector<BFInstruction*>();
+                    callbackHandled = loopPattern.second(currentLoop.LoopBody, newInstructions);
                     
-                    currentLoop.Output.insert(currentLoop.Output.end(), newInstructions.begin(), newInstructions.end());
+                    if (callbackHandled)
+                    {
+                        std::reverse(newInstructions.begin(), newInstructions.end());
+
+                        currentLoop.Output.insert(currentLoop.Output.end(), newInstructions.begin(),
+                                                  newInstructions.end());
+                    }
+                    else
+                    {
+                        while (!newInstructions.empty())
+                        {
+                            BFInstruction *ins = newInstructions.back();
+
+                            delete ins;
+                            newInstructions.pop_back();
+                        }
+                    }
                 }
             }
 
@@ -288,14 +304,14 @@ void BFOptimizer::Optimize_Loops(std::vector<BFInstruction*>& instructions)
     instructions = result;
 }
 
-std::vector<BFInstruction*> Handle_ClearLoop(const std::vector<BFInstruction*>& loopBody)
+bool Handle_ClearLoop(const std::vector<BFInstruction*>& loopBody, std::vector<BFInstruction*> &result)
 {
-    return std::vector<BFInstruction *> { new BFInstruction(ClearPtrVal) };
+    result.emplace_back(new BFInstruction(ClearPtrVal));
+    return true;
 }
 
-std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*>& loopBody)
+bool Handle_MultiplyLoop(const std::vector<BFInstruction*>& loopBody, std::vector<BFInstruction*> &result)
 {
-    std::vector<BFInstruction *> result = std::vector<BFInstruction *>();
     const BFMutatorInstruction *decrementor = (BFMutatorInstruction*)*(std::find_if(loopBody.begin(), loopBody.end(), [](BFInstruction* const& left){
         BFMutatorInstruction *mLeft;
         
@@ -303,12 +319,20 @@ std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*
         && mLeft->SimpleType == DecrPtrVal;
     }));
     
+    BFMutatorInstruction *ptrResetter = (BFMutatorInstruction*)*(std::find_if(loopBody.begin(), loopBody.end(), [](BFInstruction* const& left){
+        BFMutatorInstruction *mLeft;
+
+        return (mLeft = dynamic_cast<BFMutatorInstruction *>(left))
+               && mLeft->SimpleType == dPtrDecr;
+    }));
+    
     auto iterator = loopBody.begin(), end = loopBody.end();
     
     auto partBegin = BFLoopPatterns.MultiplyLoopPart.begin();
     auto partEnd = BFLoopPatterns.MultiplyLoopPart.end();
+    int64_t off = 0;
     
-    for (int64_t off = 0;;)
+    for (;;)
     {
         iterator = std::search(iterator, loopBody.end(),
                                partBegin, partEnd,
@@ -329,10 +353,13 @@ std::vector<BFInstruction*> Handle_MultiplyLoop(const std::vector<BFInstruction*
         iterator++;
     }
     if (result.empty())
-        LogWarning("Multiply loop without any valid multiplication actions found!")
+        LogWarning("Multiply loop without any valid multiplication actions found!");
+    if (std::abs(ptrResetter->Args[0]) != off)
+        return false;
+        
     result.emplace_back(new BFInstruction(ClearPtrVal));
     
-    return result;
+    return true;
 }
 
 void BFOptimizer::OptimizeCode(std::vector<BFInstruction *> &instructions)

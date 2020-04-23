@@ -7,6 +7,9 @@
 
 #include <stdint.h>
 
+#define DumpPath "MemoryDumps/"
+#define CrashDumpName "CrashDump"
+
 #ifdef LargeAddressAware
 typedef uint16_t BFCell; //16-bit cell
 typedef int16_t SignedBFCell;

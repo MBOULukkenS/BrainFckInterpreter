@@ -7,6 +7,7 @@
 
 
 #include <utility>
+#include <string>
 #include <vector>
 #include "Instructions/BFInstruction.h"
 #include "Environments/BFEnvironment.h"
@@ -14,18 +15,26 @@
 class BFRunner
 {
 public:
-    BFRunner(std::vector<BFInstruction*> instructions, bool flush)
+    BFRunner(std::vector<BFInstruction*> instructions, bool flush, bool enableDump)
     {
         _instructions = std::move(instructions);
+        EnableDump = enableDump;
         if (flush)
             PutcharMethod = BFRunner::PutcharFlushed;
         else
             PutcharMethod = BFRunner::Putchar;
     }
     
+    void DoMemoryDump();
+    bool DoMemoryDump(const std::string &name);
+    
     virtual void OptimizeInstructions();
     virtual void Run() = 0;
+    
+    const std::string DumpName = "MemoryDump";
+    const std::string DumpExtension = ".bin";
 
+    bool EnableDump = false;
 protected:
     void (*PutcharMethod)(int);
     

@@ -20,15 +20,18 @@ class BFInstruction;
 class BFInterpreter : public BFRunner
 {
 public:
-    explicit BFInterpreter(const std::vector<BFInstruction*>& instructions, bool flush = false, size_t cellAmount = 30720);
-    explicit BFInterpreter(const std::string &instructionsStr, bool flush = false, size_t cellAmount = 30720) 
-    : BFInterpreter(BFLoader::ParseInstructions(instructionsStr), flush, cellAmount) {}
+    explicit BFInterpreter(const std::vector<BFInstruction*>& instructions, bool flush = false, bool enableDump = false, size_t cellAmount = 30720);
+    explicit BFInterpreter(const std::string &instructionsStr, bool flush = false, bool enableDump = false, size_t cellAmount = 30720) 
+    : BFInterpreter(BFLoader::ParseInstructions(instructionsStr), flush, enableDump, cellAmount) {}
 
     void Run() override;
 
     __forceinline void Step();
 protected:
     BFInterpreterEnvironment _bfEnvironment;
+    
+    void DoCrashDump();
+    void PrintInstructionTrace(size_t instructionAmount = 5);
 };
 
 

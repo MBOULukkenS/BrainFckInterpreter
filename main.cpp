@@ -22,6 +22,7 @@ struct {
     bool Flush = false;
     bool UseStopwatch = false;
     bool UseJIT = false;
+    bool EnableDump = false;
 #ifdef DEBUG
     bool OutputInstructions = false;
 #endif
@@ -108,8 +109,8 @@ void RunnerCallback()
     //endregion
 
     BFRunner *bfRunner = (RunnerOptions.UseJIT
-                          ? (BFRunner *) new BFJITRunner(instructions, RunnerOptions.Flush, RunnerOptions.CellCount)
-                          : (BFRunner *) new BFInterpreter(instructions, RunnerOptions.Flush, RunnerOptions.CellCount));
+                          ? (BFRunner *) new BFJITRunner(instructions, RunnerOptions.Flush, RunnerOptions.EnableDump, RunnerOptions.CellCount)
+                          : (BFRunner *) new BFInterpreter(instructions, RunnerOptions.Flush, RunnerOptions.EnableDump, RunnerOptions.CellCount));
 
     if (RunnerOptions.UseJIT)
         LogMessage("JIT Enabled")
@@ -124,7 +125,7 @@ void RunnerCallback()
         bfRunner->OptimizeInstructions();
 
         if (RunnerOptions.UseStopwatch)
-            LogMessage("Optimization finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
+            LogMessage("Optimization finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>");
     }
 
     if (RunnerOptions.UseStopwatch)
@@ -135,7 +136,10 @@ void RunnerCallback()
     std::cout << std::endl << std::string(64, '-') << std::endl;
 
     if (RunnerOptions.UseStopwatch)
-        LogMessage("Program finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>")
+        LogMessage("Program finished in <" + std::to_string(stopwatch.Elapsed<Stopwatch::milliseconds>()) + "ms>");
+
+    if (RunnerOptions.EnableDump)
+        bfRunner->DoMemoryDump();
 }
 
 int main(int argc, char **argv)
@@ -189,6 +193,8 @@ int main(int argc, char **argv)
     runner->add_flag("-j,--jit", RunnerOptions.UseJIT, "Determines whether the supplied BrainF*ck code should be compiled or interpreted.");
     runner->add_flag("-t,--time", RunnerOptions.UseStopwatch,
                  "Whether the time the program takes to finish should be recorded and displayed");
+    runner->add_flag("-d,--dump", RunnerOptions.EnableDump,
+                     "Determines whether the the memory should be dumped when the Brainf*ck program exits, and whether the MemoryDump instruction should be executed or not");
 #ifdef DEBUG
     runner->add_flag("-x,--output-instructions", RunnerOptions.OutputInstructions,
                  "output the loaded code to stdout instead of executing it.");

@@ -16,8 +16,8 @@
 #include "../Logging.h"
 #include "Optimizer/BFOptimizer.h"
 
-BFInterpreter::BFInterpreter(const std::vector<BFInstruction*>& instructions, bool flush, size_t cellAmount)
-: BFRunner(instructions, flush)
+BFInterpreter::BFInterpreter(const std::vector<BFInstruction*>& instructions, bool flush, bool enableDump, size_t cellAmount)
+: BFRunner(instructions, flush, enableDump)
 {
     _environment = new BFInterpreterEnvironment(instructions, cellAmount);
     _bfEnvironment = *((BFInterpreterEnvironment*)_environment);
@@ -46,19 +46,17 @@ void BFInterpreter::Step()
             if (_bfEnvironment.CurrentCell < _bfEnvironment.Memory)
             {
                 LogError("Interpreter failed; Outputting instruction context:\n")
-                BFLoader::ExportInstructions(std::vector<BFInstruction*>(
-                        _instructions.begin() + (_bfEnvironment.InstructionPtr - 5), 
-                        _instructions.begin() + (_bfEnvironment.InstructionPtr + 5)), 
-                                std::cout);
+                PrintInstructionTrace();
+                DoCrashDump();
+                
                 LogFatal("Cell Pointer Underflow detected!! at: " + std::to_string(_bfEnvironment.InstructionPtr), -1);
             }
             if (_bfEnvironment.CurrentCell > _bfEnvironment.Memory + _bfEnvironment.PtrMaxOffset)
             {
                 LogError("Interpreter failed; Outputting instruction context:\n")
-                BFLoader::ExportInstructions(std::vector<BFInstruction*>(
-                        _instructions.begin() + (_bfEnvironment.InstructionPtr - 5),
-                        _instructions.begin() + (_bfEnvironment.InstructionPtr + 5)),
-                                             std::cout);
+                PrintInstructionTrace();
+                DoCrashDump();
+                
                 LogFatal("Cell Pointer Overflow detected!! at: " + std::to_string(_bfEnvironment.InstructionPtr), -1);
             }
             break;
@@ -98,6 +96,9 @@ void BFInterpreter::Step()
             
             _bfEnvironment.InstructionPtr = ((BFLoopInstruction*)currentInstruction)->LoopOther;
             break;
+        case DumpMemory:
+            DoMemoryDump();
+            break;
         case None:
             break;
         default:
@@ -105,4 +106,22 @@ void BFInterpreter::Step()
     }
 
     _bfEnvironment.InstructionPtr++;
+}
+
+void BFInterpreter::DoCrashDump()
+{
+    DoMemoryDump(CrashDumpName);
+}
+
+void BFInterpreter::PrintInstructionTrace(size_t instructionAmount)
+{
+    auto begin = _instructions.begin() + (_bfEnvironment.InstructionPtr - instructionAmount);
+    auto end = _instructions.begin() + (_bfEnvironment.InstructionPtr + instructionAmount);
+    
+    if (begin < _instructions.begin())
+        begin = _instructions.begin();
+    if (end > _instructions.end())
+        end = _instructions.end();
+    
+    BFLoader::ExportInstructions(std::vector<BFInstruction*>(begin, end),std::cout);
 }

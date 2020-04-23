@@ -18,6 +18,9 @@ enum BFInstructionType
     LoopBegin = '[', //begin a loop
     LoopEnd = ']', //end the loop
     
+    //Non-Standard instructions
+    DumpMemory = '!',
+    
     //Optimizer instructions
     
     ModPtrVal = 'V',
@@ -31,7 +34,7 @@ enum BFInstructionType
     ScanRight = ')'
 };
 
-const constexpr BFInstructionType BFParsableInstructions[] = {dPtrIncr, dPtrDecr, IncrPtrVal, DecrPtrVal, cWritePtrVal, cReadPtrVal, LoopBegin, LoopEnd };
+const constexpr BFInstructionType BFParsableInstructions[] = {dPtrIncr, dPtrDecr, IncrPtrVal, DecrPtrVal, cWritePtrVal, cReadPtrVal, LoopBegin, LoopEnd, DumpMemory };
 
 BFInstructionType GetOppositeInstructionType(BFInstructionType instructionType);
 

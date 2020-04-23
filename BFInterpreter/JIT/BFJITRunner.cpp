@@ -41,8 +41,8 @@ BFCell MultiplyUnderflowLoop(BFCell currentCellValue, int64_t underflowCount)
     return std::ceil(max * ((double)underflowCount - currentCellValue) / (double)underflowCount);
 }
 
-BFJITRunner::BFJITRunner(const std::vector<BFInstruction *>& instructions, bool flush, size_t cellAmount) 
-: BFRunner(instructions, flush)
+BFJITRunner::BFJITRunner(const std::vector<BFInstruction *>& instructions, bool flush, bool enableDump, size_t cellAmount) 
+: BFRunner(instructions, flush, enableDump)
 {
     _instructions = instructions;
     _environment = new BFEnvironment(cellAmount);
@@ -74,6 +74,7 @@ asmjit::Error BFJITRunner::Compile()
     compiler.addFunc(asmjit::FuncSignatureT<void, BFCell*>());
 
     asmjit::x86::Gp dataPtr = compiler.newUIntPtr("dataPtr");
+    asmjit::x86::Gp dataPtrBase = compiler.newUIntPtr("dataPtrBase");
     asmjit::x86::Gp tmpBig = compiler.newInt64("tmpBig");
     
 #ifdef LargeAddressAware
@@ -84,8 +85,8 @@ asmjit::Error BFJITRunner::Compile()
     asmjit::x86::Gp tmp = compiler.newUInt8("tmp");
 #endif
     
-    
-    compiler.setArg(0, dataPtr);
+    compiler.setArg(0, dataPtrBase);
+    compiler.mov(dataPtr, dataPtrBase);
     
     for (BFInstruction *instruction : _instructions)
     {
@@ -185,6 +186,10 @@ asmjit::Error BFJITRunner::Compile()
                 
                 compiler.jmp(info.OpenLabel);
                 compiler.bind(info.CloseLabel);
+                break;
+            }
+            case DumpMemory:
+            {
                 break;
             }
             case None:
