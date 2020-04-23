@@ -137,16 +137,7 @@ asmjit::Error BFJITRunner::Compile()
                         externalCall->setRet(0, tmp);
                     }
                     
-                    int remainder;
-                    int exponent = FindExponent(multiplier, 2, remainder);
-                    
-                    if (exponent <= 0)
-                        compiler.imul(tmp, (remainder > 0 ? remainder : multiplier));
-                    
-                    if (exponent > 1) // if multiplier is a nth power of two...
-                        compiler.sal(tmp, exponent); //... use a shift left instead of an imul
-                    else if (exponent > 0)
-                        compiler.add(tmp, tmp); //if exponent is 1, square tmp instead of multiplying
+                    compiler.imul(tmp, multiplier);
                 }
                 compiler.add(asmjit::x86::ptr(dataPtr, mutInstruction->Args[0] * CellSize, CellSize), tmp);
                 break;
